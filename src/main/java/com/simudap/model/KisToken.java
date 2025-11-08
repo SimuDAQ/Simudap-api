@@ -17,18 +17,23 @@ public class KisToken {
     private long id;
 
     @Column(nullable = false, length = 2000)
-    private String token;
+    private String restApiToken;
+
+    @Column(nullable = false, length = 2000)
+    private String webSocketToken;
 
     @Column(nullable = false)
     private LocalDateTime tokenExpired;
 
-    public KisToken(String token, LocalDateTime tokenExpired) {
-        this.token = token;
+    public KisToken(String restApiToken, String webSocketToken, LocalDateTime tokenExpired) {
+        this.restApiToken = restApiToken;
+        this.webSocketToken = webSocketToken;
         this.tokenExpired = tokenExpired;
     }
 
-    public void updateToken(String token, LocalDateTime tokenExpired) {
-        this.token = token;
+    public void updateToken(String restApiToken, String webSocketToken, LocalDateTime tokenExpired) {
+        this.restApiToken = restApiToken;
+        this.webSocketToken = webSocketToken;
         this.tokenExpired = tokenExpired;
     }
 }

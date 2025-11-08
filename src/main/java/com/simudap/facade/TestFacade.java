@@ -13,7 +13,5 @@ public class TestFacade {
 
     public void test() {
         KisToken token = tokenService.getKisToken();
-        System.out.println(token.getToken());
-        System.out.println(token.getTokenExpired());
     }
 }
