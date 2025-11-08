@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,29 +18,29 @@ public class TokenService {
     private final KisTokenRepository kisTokenRepository;
 
     @Transactional
-    public KisToken getToken() {
-        Optional<KisToken> tokenOpt = kisTokenRepository.findOneByOrderByTokenExpiredDesc();
+    public KisToken getKisToken() {
+        return kisTokenRepository.findTop1ByOrderByTokenExpiredDesc()
+                .map(this::getOrUpdate)
+                .orElseGet(this::saveKisToken);
+    }
 
-        // 1. 저장된 토큰이 없을 때
-        if (tokenOpt.isEmpty()) {
-            KisOauthResponse kisToken = kisOauthService.getKisToken();
-            KisToken newOne = new KisToken(kisToken.token(), kisToken.getTokenExpired());
-            return kisTokenRepository.save(newOne);
-        }
+    private KisToken saveKisToken() {
+        KisOauthResponse kisToken = kisOauthService.getKisToken();
+        KisToken newOne = new KisToken(kisToken.token(), kisToken.getTokenExpired());
+        return kisTokenRepository.save(newOne);
+    }
 
-        // token 이 존재할 경우
-        KisToken kisToken = tokenOpt.get();
-        LocalDateTime tokenExpired = kisToken.getTokenExpired().minusHours(17);
+    private KisToken getOrUpdate(KisToken token) {
+        LocalDateTime tokenExpired = token.getTokenExpired().minusHours(17);
         LocalDateTime now = LocalDateTime.now();
 
-        // 2. 토큰 갱신
+        // 2. 토큰 갱신 (최근 토큰 발급 시간 7시간 경과 시)
         if (tokenExpired.isBefore(now)) {
             KisOauthResponse newOne = kisOauthService.getKisToken();
-            kisToken.updateToken(newOne.token(), newOne.getTokenExpired());
-            return kisToken;
+            token.updateToken(newOne.token(), newOne.getTokenExpired());
+            return token;
         }
 
-        // 3. 아직 유효하면 그대로 return
-        return kisToken;
+        return token;
     }
 }

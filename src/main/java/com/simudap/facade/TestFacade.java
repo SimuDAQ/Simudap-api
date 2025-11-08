@@ -12,7 +12,7 @@ public class TestFacade {
     private final TokenService tokenService;
 
     public void test() {
-        KisToken token = tokenService.getToken();
+        KisToken token = tokenService.getKisToken();
         System.out.println(token.getToken());
         System.out.println(token.getTokenExpired());
     }

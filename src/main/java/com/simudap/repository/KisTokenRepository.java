@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface KisTokenRepository extends JpaRepository<KisToken, Long> {
-    Optional<KisToken> findOneByOrderByTokenExpiredDesc();
+    Optional<KisToken> findTop1ByOrderByTokenExpiredDesc();
 }

@@ -24,36 +24,7 @@ public class KisOauthService {
     @Value("${kis.app-secret}")
     private String appSecret;
 
-    public KisToken getToken() {
-        Optional<KisToken> tokenOpt = kisTokenRepository.findOneByOrderByTokenExpiredDesc();
-
-        // 1. 저장된 토큰이 없을 때
-        if (tokenOpt.isEmpty()) {
-            KisToken kisToken = getKisToken();
-            return kisTokenRepository.save(kisToken);
-        }
-
-        // token 이 존재할 경우
-        KisToken kisToken = tokenOpt.get();
-        LocalDateTime tokenExpired = kisToken.getTokenExpired().minusHours(17);
-        LocalDateTime now = LocalDateTime.now();
-
-        // 2. 토큰 갱신 후 옛날 토큰 제거
-        if (tokenExpired.isBefore(now)) {
-            KisToken updated = getKisToken();
-            removeOld(kisToken.getId());
-            return updated;
-        }
-
-        // 3. 아직 유효하면 그대로 return
-        return kisToken;
-    }
-
-    private void removeOld(long id) {
-        kisTokenRepository.deleteById(id);
-    }
-
-    private KisToken getKisToken() {
+    public KisOauthResponse getKisToken() {
         KisOauthRequest oauthRequest = new KisOauthRequest(appKey, appSecret);
         String uri = UriComponentsBuilder
                 .fromUriString(KIS_DOMAIN)
@@ -64,36 +35,8 @@ public class KisOauthService {
             ResponseEntity<KisOauthResponse> response = restTemplate.postForEntity(uri, oauthRequest, KisOauthResponse.class);
             return Optional.ofNullable(response.getBody())
                     .orElseThrow(() -> new RuntimeException("Token is null"));
-
-            // 토큰 저장
-            return saveToken(token);
         } catch (Exception e) {
             throw new RuntimeException(e.getCause());
         }
     }
-
-    private KisToken saveToken(KisOauthResponse token) {
-        KisToken kisToken = new KisToken(token.token(), token.getTokenExpired());
-        return kisTokenRepository.save(kisToken);
-    }
-
-    private record KisOauthResponse(
-            @JsonProperty("access_token")
-            String token,
-
-            @JsonProperty("token_type")
-            String tokenType,
-
-            @JsonProperty("expires_in")
-            Long expiresIn,
-
-            @JsonProperty("access_token_token_expired")
-            String tokenExpired
-    ) {
-        public LocalDateTime getTokenExpired() {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            return LocalDateTime.parse(tokenExpired, formatter);
-        }
-    }
-
 }
