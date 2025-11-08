@@ -1,9 +1,7 @@
 package com.simudap.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.simudap.dto.KisOauthRequest;
-import com.simudap.model.KisToken;
-import com.simudap.repository.KisTokenRepository;
+import com.simudap.dto.kis_oauth.KisOauthRequest;
+import com.simudap.dto.kis_oauth.KisOauthResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -11,23 +9,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Optional;
-
-// 예를 들어 현재가를 찾는 API 호출이 들어왔어
-// TradeController 에서 TradeService getCurrentPrice() -> 먼저 kis 토큰을 우리 DB 에서 찾는다
-// TimeStamp 기준으로 가장 최근거 하나만 꺼내옴 Repository Optional<KisToken> findOne
-// 1. 없으면 여기 서비스 호출해서 토큰 발급하고 저장하고 조회해서 가져옴
-// 2. 있어 그럼 만료시간 먼저 체크를 함 -> 7시간이 경과된 토큰이면 새로 재발급 해서 저장하고 이전거는 삭제 그리고 새로운 토큰을 return 함
 
 @Service
 @RequiredArgsConstructor
 public class KisOauthService {
 
     private static final String KIS_DOMAIN = "https://openapi.koreainvestment.com:9443";
-    private final KisTokenRepository kisTokenRepository;
+
     private final RestTemplate restTemplate;
+
     @Value("${kis.app-key}")
     private String appKey;
     @Value("${kis.app-secret}")
@@ -71,7 +62,7 @@ public class KisOauthService {
         try {
             // 한국투자 증권에 요청해서 토큰 발급 받는 부분
             ResponseEntity<KisOauthResponse> response = restTemplate.postForEntity(uri, oauthRequest, KisOauthResponse.class);
-            KisOauthResponse token = Optional.ofNullable(response.getBody())
+            return Optional.ofNullable(response.getBody())
                     .orElseThrow(() -> new RuntimeException("Token is null"));
 
             // 토큰 저장

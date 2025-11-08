@@ -1,7 +1,7 @@
 package com.simudap.facade;
 
 import com.simudap.model.KisToken;
-import com.simudap.service.KisOauthService;
+import com.simudap.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -9,10 +9,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TestFacade {
 
-    private final KisOauthService kisOauthService;
+    private final TokenService tokenService;
 
     public void test() {
-        KisToken token = kisOauthService.getToken();
-
+        KisToken token = tokenService.getToken();
+        System.out.println(token.getToken());
+        System.out.println(token.getTokenExpired());
     }
 }

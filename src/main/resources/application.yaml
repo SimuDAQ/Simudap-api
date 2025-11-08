@@ -20,5 +20,5 @@ spring:
 
 
 kis:
-  app-key:
-  app-secret:
+  app-key: ${APP_KEY}
+  app-secret: ${APP_SECRET}

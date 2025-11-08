@@ -26,4 +26,9 @@ public class KisToken {
         this.token = token;
         this.tokenExpired = tokenExpired;
     }
+
+    public void updateToken(String token, LocalDateTime tokenExpired) {
+        this.token = token;
+        this.tokenExpired = tokenExpired;
+    }
 }
