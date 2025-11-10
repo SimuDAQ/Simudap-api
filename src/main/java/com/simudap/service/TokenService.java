@@ -35,7 +35,7 @@ public class TokenService {
         LocalDateTime now = LocalDateTime.now();
 
         // 2. 토큰 갱신 (최근 토큰 발급 시간 12시간 경과 시)
-        if (expiredAt.isBefore(now)) {
+        if (now.isAfter(expiredAt)) {
             KisTokenInfo issued = kisOauthService.getToken();
             currToken.updateToken(issued.restApiToken(), issued.webSocketToken(), issued.getTokenExpired());
             return currToken;
