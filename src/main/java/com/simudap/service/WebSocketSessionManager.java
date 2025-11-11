@@ -64,22 +64,26 @@ public class WebSocketSessionManager {
     /**
      * 특정 종목을 구독 중인 모든 클라이언트에게 메시지 브로드캐스트
      */
-    public void broadcastToStock(String stockCode, String message) {
+    public void broadcastToSubscriber(String stockCode, String message) {
         Set<WebSocketSession> sessions = stockSubscriptions.get(stockCode);
         if (sessions == null || sessions.isEmpty()) {
             return;
         }
 
         TextMessage textMessage = new TextMessage(message);
-        sessions.forEach(session -> {
-            if (session.isOpen()) {
-                try {
-                    session.sendMessage(textMessage);
-                } catch (IOException e) {
-                    log.error("메시지 전송 실패 - 세션: {}, 종목: {}", session.getId(), stockCode, e);
-                }
+        for (WebSocketSession session : sessions) {
+            if (!session.isOpen()) {
+                // client 세션이 끊겨 있으면 구독 해제 후 메세지 전송시도 x
+                unsubscribe(stockCode, session);
+                continue;
             }
-        });
+
+            try {
+                session.sendMessage(textMessage);
+            } catch (IOException e) {
+                log.error("메시지 전송 실패 - 세션: {}, 종목: {}", session.getId(), stockCode, e);
+            }
+        }
     }
 
     /**

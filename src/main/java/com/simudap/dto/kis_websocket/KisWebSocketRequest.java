@@ -19,14 +19,25 @@ public record KisWebSocketRequest(
             @JsonProperty("content-type")
             String contentType
     ) {
+        public static Header of(String approvalKey, String customerType, String transactionType, String contentType) {
+            return new Header(approvalKey, customerType, transactionType, contentType);
+        }
     }
 
     public record Body(
-            @JsonProperty("tr_id")
-            String transactionId,
-
-            @JsonProperty("tr_key")
-            String transactionKey
+            Input input
     ) {
+        public static Body of(String transactionId, String transactionKey) {
+            return new Body(new Input(transactionId, transactionKey));
+        }
+
+        private record Input(
+                @JsonProperty("tr_id")
+                String transactionId,
+
+                @JsonProperty("tr_key")
+                String transactionKey
+        ) {
+        }
     }
 }
