@@ -22,3 +22,8 @@ spring:
 kis:
   app-key: ${APP_KEY}
   app-secret: ${APP_SECRET}
+  websocket:
+    url: ws://ops.koreainvestment.com:21000  # KIS WebSocket 서버 URL
+    max-reconnect-attempts: 10  # 최대 재연결 시도 횟수
+    initial-reconnect-delay: 1000  # 초기 재연결 대기 시간 (ms)
+    max-reconnect-delay: 60000  # 최대 재연결 대기 시간 (ms)
