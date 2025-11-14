@@ -79,8 +79,8 @@ public class KisWebSocketConnectionManager {
         // 내부 Handler 생성 (Bean이 아님, 순환 의존성 방지)
         BinaryWebSocketHandler handler = new BinaryWebSocketHandler() {
             @Override
-            public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-                log.info("KIS WebSocket 연결됨: {}", session.getId());
+            public void afterConnectionEstablished(WebSocketSession session) {
+                log.info("KIS WebSocket connected: {}", session.getId());
 
                 // 세션 설정 콜백 실행
                 if (sessionSetterCallback != null) {
@@ -98,7 +98,7 @@ public class KisWebSocketConnectionManager {
 
             @Override
             public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-                log.warn("KIS WebSocket 연결 해제됨 - 상태: {}, 코드: {}", status.getReason(), status.getCode());
+                log.warn("KIS WebSocket disconnected - Reason: {}, Code: {}", status.getReason(), status.getCode());
                 if (status.getCode() != CloseStatus.NORMAL.getCode()) {
                     scheduleReconnect();
                 }
@@ -106,7 +106,7 @@ public class KisWebSocketConnectionManager {
 
             @Override
             public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-                log.error("KIS WebSocket 전송 오류 발생", exception);
+                log.error("KIS WebSocket transport error occurred", exception);
                 scheduleReconnect();
             }
         };
@@ -117,30 +117,30 @@ public class KisWebSocketConnectionManager {
                 kisWebSocketUrl
         );
         connectionManager.setAutoStartup(false);
-        log.info("KIS WebSocket ConnectionManager 초기화 완료");
+        log.info("KIS WebSocket ConnectionManager initialization completed");
     }
 
     /**
      * KIS WebSocket이 연결되어 있는지 확인
      */
-    public boolean isConnected() {
+    private boolean isConnected() {
         return connectionManager != null && connectionManager.isRunning();
     }
 
     /**
      * KIS WebSocket 연결 시작
      */
-    public void connect() {
+    private void connect() {
         if (connectionManager == null) {
-            log.error("ConnectionManager가 초기화되지 않았습니다.");
+            log.error("ConnectionManager is not initialized.");
             return;
         }
 
         if (!connectionManager.isRunning()) {
-            log.info("KIS WebSocket 연결 시작...");
+            log.info("KIS WebSocket connection start...");
             connectionManager.start();
         } else {
-            log.info("KIS WebSocket이 이미 연결되어 있습니다.");
+            log.info("KIS WebSocket is already connected.");
         }
     }
 
@@ -149,7 +149,7 @@ public class KisWebSocketConnectionManager {
      */
     public void disconnect() {
         if (connectionManager != null && connectionManager.isRunning()) {
-            log.info("KIS WebSocket 연결 종료...");
+            log.info("KIS WebSocket connection closing...");
             connectionManager.stop();
         }
     }
@@ -158,7 +158,7 @@ public class KisWebSocketConnectionManager {
      * 연결 성공 시 호출 (내부 Handler에서 호출)
      */
     private void onConnectionEstablished() {
-        log.info("KIS WebSocket 연결 성공");
+        log.info("KIS WebSocket connection successful");
         // 재연결 시도 횟수 초기화
         reconnectAttempts.set(0);
 
@@ -175,7 +175,7 @@ public class KisWebSocketConnectionManager {
         int currentAttempt = reconnectAttempts.incrementAndGet();
 
         if (currentAttempt > maxReconnectAttempts) {
-            log.error("KIS WebSocket 재연결 최대 시도 횟수({})를 초과했습니다. 재연결을 중단합니다.", maxReconnectAttempts);
+            log.error("KIS WebSocket exceeded maximum reconnect attempts ({}). Stopping reconnection.", maxReconnectAttempts);
             return;
         }
 
@@ -185,7 +185,7 @@ public class KisWebSocketConnectionManager {
                 maxReconnectDelay
         );
 
-        log.info("KIS WebSocket 재연결 시도 {}/{} - {}ms 후 재시도",
+        log.info("KIS WebSocket reconnect attempt {}/{} - Retrying after {}ms",
                 currentAttempt, maxReconnectAttempts, delay);
 
         scheduler.schedule(this::reconnect, delay, TimeUnit.MILLISECONDS);
@@ -196,7 +196,7 @@ public class KisWebSocketConnectionManager {
      */
     private void reconnect() {
         try {
-            log.info("KIS WebSocket 재연결 시도 중...");
+            log.info("KIS WebSocket reconnecting...");
 
             // 기존 연결 종료
             if (connectionManager.isRunning()) {
@@ -206,9 +206,9 @@ public class KisWebSocketConnectionManager {
             // 새로운 연결 시작
             connectionManager.start();
 
-            log.info("KIS WebSocket 재연결 요청 완료");
+            log.info("KIS WebSocket reconnection request completed");
         } catch (Exception e) {
-            log.error("KIS WebSocket 재연결 중 오류 발생", e);
+            log.error("Error occurred during KIS WebSocket reconnection", e);
             // 재연결 실패 시 다시 스케줄링
             scheduleReconnect();
         }
@@ -221,7 +221,7 @@ public class KisWebSocketConnectionManager {
         WebSocketSession session = sessionSupplier.get();
 
         if (session == null || !session.isOpen()) {
-            log.info("KIS WebSocket이 연결되지 않음. 연결 시작...");
+            log.info("KIS WebSocket is not connected. Connecting start...");
 
             if (!isConnected()) {
                 connect();
@@ -239,16 +239,16 @@ public class KisWebSocketConnectionManager {
                         // 매번 최신 세션 값을 체크
                         session = sessionSupplier.get();
                         if (session != null && session.isOpen()) {
-                            log.info("KIS WebSocket 연결 성공 확인");
+                            log.info("KIS WebSocket connection verified");
                             return;
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        throw new IllegalStateException("KIS WebSocket 연결 대기 중 인터럽트 발생", e);
+                        throw new IllegalStateException("Interrupted while waiting for KIS WebSocket connection", e);
                     }
                 }
 
-                throw new IllegalStateException("KIS WebSocket 연결 타임아웃");
+                throw new IllegalStateException("KIS WebSocket connection timeout");
             }
         }
     }
@@ -263,13 +263,13 @@ public class KisWebSocketConnectionManager {
             String[] split = stockShortCode.split("\\|");
             String stockCode = split[split.length - 1];
 
-            // 로그 출력 (디버깅용)
-            log.info("유가증권 단축 종목코드: {}", stockShortCode);
-            log.info("영업시간: {}, 시간구분 코드: {}", stockInfos[1], stockInfos[2]);
+            // Log output (for debugging)
+            log.info("Stock short code: {}", stockShortCode);
+            log.info("Business time: {}, Time code: {}", stockInfos[1], stockInfos[2]);
 
             // 구독자가 있는지 확인
             if (!sessionManager.hasSubscribers(stockCode)) {
-                log.warn("종목 {} 에 구독자가 없습니다. KIS 구독 해제 요청...", stockCode);
+                log.warn("No subscribers for stock code {}. Requesting KIS unsubscribe...", stockCode);
 
                 // 구독자가 없으면 KIS에 구독 해제 요청
                 if (unsubscribeIfNoSubscribersCallback != null) {
@@ -285,9 +285,9 @@ public class KisWebSocketConnectionManager {
                 String jsonData = objectMapper.writeValueAsString(data);
                 // 해당 종목을 구독 중인 클라이언트들에게 브로드캐스트
                 sessionManager.broadcastToSubscriber(stockCode, jsonData);
-                log.debug("종목 데이터 전송 완료: {}", stockShortCode);
+                log.debug("Stock data transmission completed: {}", stockShortCode);
             } catch (Exception e) {
-                log.error("데이터 전송 중 오류 발생 - 종목: {}", stockShortCode, e);
+                log.error("Error occurred during data transmission - Stock code: {}", stockShortCode, e);
             }
         }
     }

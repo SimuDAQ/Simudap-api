@@ -1,7 +1,8 @@
 package com.simudap.handler;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simudap.dto.kis_websocket.ClientMessage;
+import com.simudap.enums.WebsocketAction;
 import com.simudap.service.KisWebSocketService;
 import com.simudap.service.WebSocketSessionManager;
 import lombok.RequiredArgsConstructor;
@@ -22,34 +23,33 @@ public class ClientWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(WebSocketSession session) {
         sessionManager.addSession(session);
-        log.info("클라이언트 연결됨: {}", session.getId());
+        log.info("Client connected: {}", session.getId());
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        log.info("클라이언트로부터 메시지 수신: {}", payload);
+        log.info("Message from client: {}", payload);
 
         try {
             // JSON 파싱: {"action": "subscribe", "stockCode": "005930"}
-            JsonNode jsonNode = objectMapper.readTree(payload);
-            String action = jsonNode.get("action").asText();
-            String stockCode = jsonNode.get("stockCode").asText();
+            ClientMessage request = objectMapper.readValue(payload, ClientMessage.class);
 
-            switch (action) {
-                case "subscribe":
-                    handleSubscribe(session, stockCode);
+            switch (request.action()) {
+                case WebsocketAction.SUBSCRIBE:
+                    handleSubscribe(session, request.stockCode());
                     break;
-                case "unsubscribe":
-                    handleUnsubscribe(session, stockCode);
+                case WebsocketAction.UNSUBSCRIBE:
+                    handleUnsubscribe(session, request.stockCode());
                     break;
                 default:
-                    log.warn("알 수 없는 액션: {}", action);
+                    log.warn("Unknown action: {}", request.action());
             }
         } catch (Exception e) {
-            log.error("메시지 처리 중 오류 발생", e);
+            log.error("Error occurred from processing client message: {}", e.getMessage());
+            // TODO : Refactor Message format to Custom Error format
             session.sendMessage(new TextMessage("{\"error\": \"Invalid message format\"}"));
         }
     }
@@ -66,7 +66,7 @@ public class ClientWebSocketHandler extends TextWebSocketHandler {
         // 구독 성공 응답
         String response = String.format("{\"status\": \"subscribed\", \"stockCode\": \"%s\"}", stockCode);
         session.sendMessage(new TextMessage(response));
-        log.info("종목 구독 완료 - 세션: {}, 종목: {}", session.getId(), stockCode);
+        log.info("Client's stock subscribe completed - Session: {}, Stock code: {}", session.getId(), stockCode);
     }
 
     private void handleUnsubscribe(WebSocketSession session, String stockCode) throws Exception {
@@ -81,18 +81,18 @@ public class ClientWebSocketHandler extends TextWebSocketHandler {
         // 구독 해제 성공 응답
         String response = String.format("{\"status\": \"unsubscribed\", \"stockCode\": \"%s\"}", stockCode);
         session.sendMessage(new TextMessage(response));
-        log.info("종목 구독 해제 완료 - 세션: {}, 종목: {}", session.getId(), stockCode);
+        log.info("Stock unsubscribe completed - Session: {}, Stock code: {}", session.getId(), stockCode);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessionManager.removeSession(session);
-        log.info("클라이언트 연결 해제됨: {}, 상태: {}", session.getId(), status);
+        log.info("Client disconnected: {}, Status: {}", session.getId(), status);
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        log.error("WebSocket 전송 오류 - 세션: {}", session.getId(), exception);
+        log.error("WebSocket transport error - Session: {}", session.getId(), exception);
         sessionManager.removeSession(session);
     }
 }

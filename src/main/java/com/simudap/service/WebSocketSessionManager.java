@@ -26,7 +26,7 @@ public class WebSocketSessionManager {
      */
     public void addSession(WebSocketSession session) {
         clientSessions.add(session);
-        log.info("클라이언트 세션 추가: {}", session.getId());
+        log.info("Client session added: {}", session.getId());
     }
 
     /**
@@ -36,7 +36,7 @@ public class WebSocketSessionManager {
         clientSessions.remove(session);
         // 해당 세션이 구독 중인 모든 종목에서 제거
         stockSubscriptions.values().forEach(sessions -> sessions.remove(session));
-        log.info("클라이언트 세션 제거: {}", session.getId());
+        log.info("Client session removed: {}", session.getId());
     }
 
     /**
@@ -44,7 +44,7 @@ public class WebSocketSessionManager {
      */
     public void subscribe(String stockCode, WebSocketSession session) {
         stockSubscriptions.computeIfAbsent(stockCode, k -> new CopyOnWriteArraySet<>()).add(session);
-        log.info("종목 구독: {} by 세션 {}", stockCode, session.getId());
+        log.info("Stock subscription: {} by sessionId {}", stockCode, session.getId());
     }
 
     /**
@@ -57,7 +57,7 @@ public class WebSocketSessionManager {
             if (sessions.isEmpty()) {
                 stockSubscriptions.remove(stockCode);
             }
-            log.info("종목 구독 해제: {} by 세션 {}", stockCode, session.getId());
+            log.info("Stock unsubscribed: {} by session {}", stockCode, session.getId());
         }
     }
 
@@ -81,7 +81,7 @@ public class WebSocketSessionManager {
             try {
                 session.sendMessage(textMessage);
             } catch (IOException e) {
-                log.error("메시지 전송 실패 - 세션: {}, 종목: {}", session.getId(), stockCode, e);
+                log.error("Failed to send message - Session: {}, Stock code: {}", session.getId(), stockCode, e);
             }
         }
     }
@@ -96,7 +96,7 @@ public class WebSocketSessionManager {
                 try {
                     session.sendMessage(textMessage);
                 } catch (IOException e) {
-                    log.error("메시지 전송 실패 - 세션: {}", session.getId(), e);
+                    log.error("Failed to send message - Session: {}", session.getId(), e);
                 }
             }
         });

@@ -52,7 +52,7 @@ public class KisWebSocketService {
      */
     private void setKisSession(WebSocketSession session) {
         this.kisSession = session;
-        log.info("KIS WebSocket 세션 설정됨: {}", session.getId());
+        log.info("KIS WebSocket session set: {}", session.getId());
     }
 
     /**
@@ -65,7 +65,7 @@ public class KisWebSocketService {
 
         // 이미 구독 중이면 무시
         if (subscribedStocks.contains(stockCode)) {
-            log.info("이미 구독 중인 종목: {}", stockCode);
+            log.info("Stock already subscribed: {}", stockCode);
             return;
         }
 
@@ -77,7 +77,7 @@ public class KisWebSocketService {
         kisSession.sendMessage(new TextMessage(jsonRequest));
         subscribedStocks.add(stockCode);
 
-        log.info("KIS 구독 요청 전송: {}", stockCode);
+        log.info("KIS subscribe request sent: {}", stockCode);
     }
 
     /**
@@ -85,12 +85,12 @@ public class KisWebSocketService {
      */
     public void unsubscribe(String stockCode) throws IOException {
         if (kisSession == null || !kisSession.isOpen()) {
-            log.error("KIS WebSocket 세션이 연결되지 않음");
+            log.error("KIS WebSocket session is not connected");
             return;
         }
 
         if (!subscribedStocks.contains(stockCode)) {
-            log.info("구독 중이지 않은 종목: {}", stockCode);
+            log.info("Stock not subscribed: {}", stockCode);
             return;
         }
 
@@ -102,7 +102,7 @@ public class KisWebSocketService {
         kisSession.sendMessage(new TextMessage(jsonRequest));
         subscribedStocks.remove(stockCode);
 
-        log.info("KIS 구독 해제 요청 전송: {}", stockCode);
+        log.info("KIS unsubscribe request sent: {}", stockCode);
     }
 
     /**
@@ -125,10 +125,10 @@ public class KisWebSocketService {
      */
     private void unsubscribeIfNoSubscribers(String stockCode) {
         try {
-            log.info("구독자가 없는 종목 {} KIS 구독 해제 시도", stockCode);
+            log.info("Attempting KIS unsubscribe for stock {} with no subscribers", stockCode);
             unsubscribe(stockCode);
         } catch (Exception e) {
-            log.error("KIS 구독 해제 실패 - 종목: {}", stockCode, e);
+            log.error("KIS unsubscribe failed - Stock code: {}", stockCode, e);
         }
     }
 
@@ -137,11 +137,11 @@ public class KisWebSocketService {
      */
     private void resubscribeAll() {
         if (subscribedStocks.isEmpty()) {
-            log.info("재구독할 종목이 없습니다.");
+            log.info("No stocks to resubscribe.");
             return;
         }
 
-        log.info("재연결 후 {} 종목 재구독 시작", subscribedStocks.size());
+        log.info("Starting resubscription of {} stocks after reconnection", subscribedStocks.size());
 
         // 기존 구독 종목 복사 (동시성 문제 방지)
         Set<String> stocksToResubscribe = ConcurrentHashMap.newKeySet();
@@ -154,7 +154,7 @@ public class KisWebSocketService {
         for (String stockCode : stocksToResubscribe) {
             try {
                 if (kisSession == null || !kisSession.isOpen()) {
-                    log.warn("KIS WebSocket 세션이 열려있지 않아 재구독 중단");
+                    log.warn("KIS WebSocket session is not open, stopping resubscription");
                     break;
                 }
 
@@ -166,14 +166,14 @@ public class KisWebSocketService {
                 kisSession.sendMessage(new TextMessage(jsonRequest));
                 subscribedStocks.add(stockCode);
 
-                log.info("종목 재구독 성공: {}", stockCode);
+                log.info("Stock resubscription successful: {}", stockCode);
             } catch (Exception e) {
-                log.error("종목 재구독 실패: {}", stockCode, e);
+                log.error("Stock resubscription failed: {}", stockCode, e);
                 // 실패한 경우에도 다음 종목 계속 시도
             }
         }
 
-        log.info("재구독 완료 - 성공: {}/{}", subscribedStocks.size(), stocksToResubscribe.size());
+        log.info("Resubscription completed - Success: {}/{}", subscribedStocks.size(), stocksToResubscribe.size());
     }
 
     /**

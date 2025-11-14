@@ -1,4 +1,4 @@
-package com.simudap.Config;
+package com.simudap.config;
 
 
 import com.simudap.handler.ClientWebSocketHandler;
