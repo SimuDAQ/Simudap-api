@@ -35,7 +35,7 @@ dependencies {
     // RestTemplate
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    // WebSocketsw
+    // WebSockets
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // test

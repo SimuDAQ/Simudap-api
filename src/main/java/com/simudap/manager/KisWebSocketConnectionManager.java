@@ -1,11 +1,14 @@
-package com.simudap.service;
+package com.simudap.manager;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.simudap.dto.websocket.StockRealtimeData;
+import com.simudap.dto.websocket.StockRealtimeData.ExpectedTrade;
+import com.simudap.dto.websocket.StockRealtimeData.PriceLevel;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -14,8 +17,8 @@ import org.springframework.web.socket.client.WebSocketConnectionManager;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -32,12 +35,14 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class KisWebSocketConnectionManager {
 
-    private final WebSocketSessionManager sessionManager;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ClientStockSubscriptionManager subscriptionManager;
+    private final SimpMessagingTemplate messagingTemplate;
+
     // 재연결 관련
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private WebSocketConnectionManager connectionManager;
+
     /**
      * -- SETTER --
      * KisWebSocketService에서 콜백 등록
@@ -268,7 +273,7 @@ public class KisWebSocketConnectionManager {
             log.info("Business time: {}, Time code: {}", stockInfos[1], stockInfos[2]);
 
             // 구독자가 있는지 확인
-            if (!sessionManager.hasSubscribers(stockCode)) {
+            if (!subscriptionManager.hasSubscribers(stockCode)) {
                 log.warn("No subscribers for stock code {}. Requesting KIS unsubscribe...", stockCode);
 
                 // 구독자가 없으면 KIS에 구독 해제 요청
@@ -278,13 +283,12 @@ public class KisWebSocketConnectionManager {
                 return;  // 메시지 처리 중단
             }
 
-            // 데이터를 JSON 형태로 변환
-            Map<String, Object> data = buildStockData(stockInfos);
+            // 데이터를 DTO로 변환
+            StockRealtimeData data = buildStockData(stockInfos);
 
             try {
-                String jsonData = objectMapper.writeValueAsString(data);
-                // 해당 종목을 구독 중인 클라이언트들에게 브로드캐스트
-                sessionManager.broadcastToSubscriber(stockCode, jsonData);
+                // STOMP를 통해 해당 종목을 구독 중인 클라이언트들에게 브로드캐스트
+                messagingTemplate.convertAndSend("/topic/stock/" + stockCode, data);
                 log.debug("Stock data transmission completed: {}", stockShortCode);
             } catch (Exception e) {
                 log.error("Error occurred during data transmission - Stock code: {}", stockShortCode, e);
@@ -293,59 +297,54 @@ public class KisWebSocketConnectionManager {
     }
 
     /**
-     * 수신한 데이터를 구조화된 JSON 객체로 변환
+     * 수신한 데이터를 StockRealtimeData DTO로 변환
      */
-    private Map<String, Object> buildStockData(String[] recvvalue) {
-        Map<String, Object> data = new HashMap<>();
-
-        data.put("stockCode", recvvalue[0]);
-        data.put("businessTime", recvvalue[1]);
-        data.put("timeCode", recvvalue[2]);
-
+    private StockRealtimeData buildStockData(String[] recvvalue) {
         // 매도호가 (10단계)
-        Map<String, Object> askPrices = new HashMap<>();
+        List<PriceLevel> askPrices = new ArrayList<>();
         for (int i = 1; i <= 10; i++) {
-            Map<String, String> priceInfo = new HashMap<>();
-            priceInfo.put("price", recvvalue[12 - i + 1]);
-            priceInfo.put("volume", recvvalue[32 - i + 1]);
-            askPrices.put("level" + i, priceInfo);
+            askPrices.add(new PriceLevel(
+                    recvvalue[12 - i + 1],  // price
+                    recvvalue[32 - i + 1]   // volume
+            ));
         }
-        data.put("askPrices", askPrices);
 
         // 매수호가 (10단계)
-        Map<String, Object> bidPrices = new HashMap<>();
+        List<PriceLevel> bidPrices = new ArrayList<>();
         for (int i = 1; i <= 10; i++) {
-            Map<String, String> priceInfo = new HashMap<>();
-            priceInfo.put("price", recvvalue[12 + i]);
-            priceInfo.put("volume", recvvalue[32 + i]);
-            bidPrices.put("level" + i, priceInfo);
+            bidPrices.add(new PriceLevel(
+                    recvvalue[12 + i],  // price
+                    recvvalue[32 + i]   // volume
+            ));
         }
-        data.put("bidPrices", bidPrices);
-
-        // 총 호가 정보
-        data.put("totalAskVolume", recvvalue[43]);
-        data.put("totalAskVolumeChange", recvvalue[54]);
-        data.put("totalBidVolume", recvvalue[44]);
-        data.put("totalBidVolumeChange", recvvalue[55]);
-
-        // 시간외 호가 정보
-        data.put("afterHoursTotalAskVolume", recvvalue[45]);
-        data.put("afterHoursTotalBidVolume", recvvalue[46]);
-        data.put("afterHoursTotalAskVolumeChange", recvvalue[56]);
-        data.put("afterHoursTotalBidVolumeChange", recvvalue[57]);
 
         // 예상 체결 정보
-        data.put("expectedPrice", recvvalue[47]);
-        data.put("expectedVolume", recvvalue[48]);
-        data.put("expectedTotalVolume", recvvalue[49]);
-        data.put("expectedPriceChange", recvvalue[50]);
-        data.put("expectedPriceSign", recvvalue[51]);
-        data.put("expectedPriceChangeRate", recvvalue[52]);
+        ExpectedTrade expectedTrade = new ExpectedTrade(
+                recvvalue[47],  // price
+                recvvalue[48],  // volume
+                recvvalue[49],  // totalVolume
+                recvvalue[50],  // priceChange
+                recvvalue[51],  // priceSign
+                recvvalue[52]   // priceChangeRate
+        );
 
-        // 기타
-        data.put("accumulatedVolume", recvvalue[53]);
-        data.put("tradeTypeCode", recvvalue[58]);
-
-        return data;
+        return new StockRealtimeData(
+                recvvalue[0],   // stockCode
+                recvvalue[1],   // businessTime
+                recvvalue[2],   // timeCode
+                askPrices,
+                bidPrices,
+                recvvalue[43],  // totalAskVolume
+                recvvalue[54],  // totalAskVolumeChange
+                recvvalue[44],  // totalBidVolume
+                recvvalue[55],  // totalBidVolumeChange
+                recvvalue[45],  // afterHoursTotalAskVolume
+                recvvalue[46],  // afterHoursTotalBidVolume
+                recvvalue[56],  // afterHoursTotalAskVolumeChange
+                recvvalue[57],  // afterHoursTotalBidVolumeChange
+                expectedTrade,
+                recvvalue[53],  // accumulatedVolume
+                recvvalue[58]   // tradeTypeCode
+        );
     }
 }

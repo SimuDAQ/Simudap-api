@@ -2,6 +2,9 @@ package com.simudap.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.simudap.dto.kis_websocket.KisWebSocketRequest;
+import com.simudap.enums.KisRequestType;
+import com.simudap.error.WebSocketOperationException;
+import com.simudap.manager.KisWebSocketConnectionManager;
 import com.simudap.model.KisToken;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,7 +28,7 @@ public class KisWebSocketService {
 
     private final TokenService tokenService;
     private final KisWebSocketConnectionManager connectionManager;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     // 현재 KIS에 구독 요청한 종목 코드들
     private final Set<String> subscribedStocks = ConcurrentHashMap.newKeySet();
@@ -58,32 +61,37 @@ public class KisWebSocketService {
     /**
      * 종목 구독 요청
      */
-    public void subscribe(String stockCode) throws IOException {
+    public void subscribe(String stockCode) {
         // KIS WebSocket 연결 확인 및 필요시 연결 (ConnectionManager에 위임)
         // Supplier를 전달하여 최신 세션 값을 항상 체크하도록 함
         connectionManager.ensureConnected(() -> kisSession);
 
         // 이미 구독 중이면 무시
-        if (subscribedStocks.contains(stockCode)) {
+        if (isSubscribed(stockCode)) {
             log.info("Stock already subscribed: {}", stockCode);
             return;
         }
 
         // 구독 요청 생성
         KisWebSocketRequest request = createSubscribeRequest(stockCode);
-        String jsonRequest = objectMapper.writeValueAsString(request);
 
-        // KIS에 구독 요청 전송
-        kisSession.sendMessage(new TextMessage(jsonRequest));
-        subscribedStocks.add(stockCode);
+        try {
+            String jsonRequest = objectMapper.writeValueAsString(request);
 
-        log.info("KIS subscribe request sent: {}", stockCode);
+            // KIS에 구독 요청 전송
+            kisSession.sendMessage(new TextMessage(jsonRequest));
+            subscribedStocks.add(stockCode);
+
+            log.info("KIS subscribe request sent: {}", stockCode);
+        } catch (Exception e) {
+            throw new WebSocketOperationException("An error occurred while processing the stock subscription.");
+        }
     }
 
     /**
      * 종목 구독 해제 요청
      */
-    public void unsubscribe(String stockCode) throws IOException {
+    public void unsubscribe(String stockCode) {
         if (kisSession == null || !kisSession.isOpen()) {
             log.error("KIS WebSocket session is not connected");
             return;
@@ -94,15 +102,19 @@ public class KisWebSocketService {
             return;
         }
 
-        // 구독 해제 요청 생성
-        KisWebSocketRequest request = createUnsubscribeRequest(stockCode);
-        String jsonRequest = objectMapper.writeValueAsString(request);
+        try {
+            // 구독 해제 요청 생성
+            KisWebSocketRequest request = createUnsubscribeRequest(stockCode);
+            String jsonRequest = objectMapper.writeValueAsString(request);
 
-        // KIS에 구독 해제 요청 전송
-        kisSession.sendMessage(new TextMessage(jsonRequest));
-        subscribedStocks.remove(stockCode);
+            // KIS에 구독 해제 요청 전송
+            kisSession.sendMessage(new TextMessage(jsonRequest));
+            subscribedStocks.remove(stockCode);
 
-        log.info("KIS unsubscribe request sent: {}", stockCode);
+            log.info("KIS unsubscribe request sent: {}", stockCode);
+        } catch (Exception e) {
+            throw new WebSocketOperationException("An error occurred while processing the stock unsubscription.");
+        }
     }
 
     /**
@@ -177,30 +189,21 @@ public class KisWebSocketService {
     }
 
     /**
-     * 현재 구독 중인 종목 목록 조회
-     */
-    public Set<String> getSubscribedStocks() {
-        return new java.util.HashSet<>(subscribedStocks);
-    }
-
-    /**
      * 구독 요청 생성
      */
     private KisWebSocketRequest createSubscribeRequest(String stockCode) {
         KisToken token = tokenService.getKisToken();
 
         KisWebSocketRequest.Header header = KisWebSocketRequest.Header.of(
-                token.getWebSocketToken(),  // approval_key
-                "P",                         // custtype (개인: P)
-                "1",                         // tr_type (등록: 1)
-                "utf-8"                      // content-type
+                token.getWebSocketToken(),
+                KisRequestType.CUSTOMER_TYPE_P.getValue(),
+                KisRequestType.TRADE_TYPE_REGISTRATION.getValue(),
+                StandardCharsets.UTF_8.name()
         );
 
         KisWebSocketRequest.Body body = KisWebSocketRequest.Body.of(
-//                "H0STASP0",                  // tr_id (실시간 호가) KRX
-//                "H0NXASP0",                  // tr_id (실시간 호가) NXT
-                "H0UNASP0",                  // tr_id (실시간 호가) 통합
-                stockCode                    // tr_key (종목 코드)
+                KisRequestType.TRADE_ID_INTEGRATION.getValue(),
+                stockCode
         );
 
         return new KisWebSocketRequest(header, body);
@@ -214,16 +217,14 @@ public class KisWebSocketService {
 
         KisWebSocketRequest.Header header = KisWebSocketRequest.Header.of(
                 token.getWebSocketToken(),  // approval_key
-                "P",                         // custtype (개인: P)
-                "2",                         // tr_type (해제: 2)
-                "utf-8"                      // content-type
+                KisRequestType.CUSTOMER_TYPE_P.getValue(),
+                KisRequestType.TRADE_TYPE_UNREGISTRATION.getValue(),
+                StandardCharsets.UTF_8.name()
         );
 
         KisWebSocketRequest.Body body = KisWebSocketRequest.Body.of(
-                //                "H0STASP0",                  // tr_id (실시간 호가) KRX
-//                "H0NXASP0",                  // tr_id (실시간 호가) NXT
-                "H0UNASP0",                  // tr_id (실시간 호가) 통합
-                stockCode                    // tr_key (종목 코드)
+                KisRequestType.TRADE_ID_INTEGRATION.getValue(),
+                stockCode
         );
 
         return new KisWebSocketRequest(header, body);
