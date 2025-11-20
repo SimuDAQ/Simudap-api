@@ -1,4 +1,4 @@
-package com.simudap.Config;
+package com.simudap.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.client.RestTemplateBuilder;
