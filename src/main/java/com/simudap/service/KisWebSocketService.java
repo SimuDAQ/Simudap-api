@@ -66,19 +66,16 @@ public class KisWebSocketService {
         // Supplier를 전달하여 최신 세션 값을 항상 체크하도록 함
         connectionManager.ensureConnected(() -> kisSession);
 
-        // 이미 구독 중이면 무시
         if (isSubscribed(stockCode)) {
             log.info("Stock already subscribed: {}", stockCode);
             return;
         }
 
-        // 구독 요청 생성
         KisWebSocketRequest request = createSubscribeRequest(stockCode);
 
         try {
             String jsonRequest = objectMapper.writeValueAsString(request);
 
-            // KIS에 구독 요청 전송
             kisSession.sendMessage(new TextMessage(jsonRequest));
             subscribedStocks.add(stockCode);
 
@@ -103,11 +100,9 @@ public class KisWebSocketService {
         }
 
         try {
-            // 구독 해제 요청 생성
             KisWebSocketRequest request = createUnsubscribeRequest(stockCode);
             String jsonRequest = objectMapper.writeValueAsString(request);
 
-            // KIS에 구독 해제 요청 전송
             kisSession.sendMessage(new TextMessage(jsonRequest));
             subscribedStocks.remove(stockCode);
 
@@ -117,9 +112,6 @@ public class KisWebSocketService {
         }
     }
 
-    /**
-     * 특정 종목이 구독 중인지 확인
-     */
     public boolean isSubscribed(String stockCode) {
         return subscribedStocks.contains(stockCode);
     }
@@ -170,27 +162,21 @@ public class KisWebSocketService {
                     break;
                 }
 
-                // 구독 요청 생성
                 KisWebSocketRequest request = createSubscribeRequest(stockCode);
                 String jsonRequest = objectMapper.writeValueAsString(request);
 
-                // KIS에 구독 요청 전송
                 kisSession.sendMessage(new TextMessage(jsonRequest));
                 subscribedStocks.add(stockCode);
 
                 log.info("Stock resubscription successful: {}", stockCode);
             } catch (Exception e) {
                 log.error("Stock resubscription failed: {}", stockCode, e);
-                // 실패한 경우에도 다음 종목 계속 시도
             }
         }
 
         log.info("Resubscription completed - Success: {}/{}", subscribedStocks.size(), stocksToResubscribe.size());
     }
 
-    /**
-     * 구독 요청 생성
-     */
     private KisWebSocketRequest createSubscribeRequest(String stockCode) {
         KisToken token = tokenService.getKisToken();
 
@@ -209,9 +195,6 @@ public class KisWebSocketService {
         return new KisWebSocketRequest(header, body);
     }
 
-    /**
-     * 구독 해제 요청 생성
-     */
     private KisWebSocketRequest createUnsubscribeRequest(String stockCode) {
         KisToken token = tokenService.getKisToken();
 
