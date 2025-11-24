@@ -1,8 +1,6 @@
 package com.simudap.manager;
 
 import com.simudap.dto.websocket.StockRealtimeData;
-import com.simudap.dto.websocket.StockRealtimeData.ExpectedTrade;
-import com.simudap.dto.websocket.StockRealtimeData.PriceLevel;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -16,9 +14,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketConnectionManager;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -43,38 +38,29 @@ public class KisWebSocketConnectionManager {
     private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
     private WebSocketConnectionManager connectionManager;
 
-    /**
-     * -- SETTER --
-     * KisWebSocketService에서 콜백 등록
-     */
     // 연결 성공 시 실행할 콜백 (KisWebSocketService에서 등록)
     @Setter
     private Runnable onConnectionEstablishedCallback;
-    /**
-     * -- SETTER --
-     * KisWebSocketService에서 세션 설정 콜백 등록
-     */
+
     // 세션 설정 콜백
     @Setter
     private Consumer<WebSocketSession> sessionSetterCallback;
-    /**
-     * -- SETTER --
-     * 구독자가 없을 때 KIS 구독 해제 콜백
-     */
+
     // 구독자가 없을 때 KIS에 구독 해제 요청 콜백
     @Setter
     private Consumer<String> unsubscribeIfNoSubscribersCallback;
+
     @Value("${kis.websocket.url}")
     private String kisWebSocketUrl;
 
     @Value("${kis.websocket.max-reconnect-attempts}")
     private int maxReconnectAttempts;
 
-    @Value("${kis.websocket.initial-reconnect-delay}")
-    private long initialReconnectDelay;
+    @Value("${kis.websocket.reconnect-delay}")
+    private long reconnectDelay;
 
-    @Value("${kis.websocket.max-reconnect-delay}")
-    private long maxReconnectDelay;
+    @Value("${websocket.endpoints.stock-data-topic}")
+    private String stockDataTopicPrefix;
 
     @PostConstruct
     public void init() {
@@ -125,16 +111,10 @@ public class KisWebSocketConnectionManager {
         log.info("KIS WebSocket ConnectionManager initialization completed");
     }
 
-    /**
-     * KIS WebSocket이 연결되어 있는지 확인
-     */
     private boolean isConnected() {
         return connectionManager != null && connectionManager.isRunning();
     }
 
-    /**
-     * KIS WebSocket 연결 시작
-     */
     private void connect() {
         if (connectionManager == null) {
             log.error("ConnectionManager is not initialized.");
@@ -146,16 +126,6 @@ public class KisWebSocketConnectionManager {
             connectionManager.start();
         } else {
             log.info("KIS WebSocket is already connected.");
-        }
-    }
-
-    /**
-     * KIS WebSocket 연결 종료
-     */
-    public void disconnect() {
-        if (connectionManager != null && connectionManager.isRunning()) {
-            log.info("KIS WebSocket connection closing...");
-            connectionManager.stop();
         }
     }
 
@@ -173,9 +143,6 @@ public class KisWebSocketConnectionManager {
         }
     }
 
-    /**
-     * 재연결 스케줄링 (지수 백오프 적용)
-     */
     public void scheduleReconnect() {
         int currentAttempt = reconnectAttempts.incrementAndGet();
 
@@ -184,21 +151,12 @@ public class KisWebSocketConnectionManager {
             return;
         }
 
-        // 지수 백오프 계산: initialDelay * 2^(attempt-1)
-        long delay = Math.min(
-                initialReconnectDelay * (long) Math.pow(2, currentAttempt - 1),
-                maxReconnectDelay
-        );
-
         log.info("KIS WebSocket reconnect attempt {}/{} - Retrying after {}ms",
-                currentAttempt, maxReconnectAttempts, delay);
+                currentAttempt, maxReconnectAttempts, reconnectDelay);
 
-        scheduler.schedule(this::reconnect, delay, TimeUnit.MILLISECONDS);
+        scheduler.schedule(this::reconnect, reconnectDelay, TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * KIS WebSocket 재연결 수행
-     */
     private void reconnect() {
         try {
             log.info("KIS WebSocket reconnecting...");
@@ -258,9 +216,6 @@ public class KisWebSocketConnectionManager {
         }
     }
 
-    /**
-     * KIS로부터 받은 메시지 처리
-     */
     private void handleKisMessage(TextMessage message) {
         String[] stockInfos = message.getPayload().split("\\^");
         if (stockInfos.length > 1) {
@@ -268,83 +223,27 @@ public class KisWebSocketConnectionManager {
             String[] split = stockShortCode.split("\\|");
             String stockCode = split[split.length - 1];
 
-            // Log output (for debugging)
             log.info("Stock short code: {}", stockShortCode);
             log.info("Business time: {}, Time code: {}", stockInfos[1], stockInfos[2]);
 
-            // 구독자가 있는지 확인
             if (!subscriptionManager.hasSubscribers(stockCode)) {
                 log.warn("No subscribers for stock code {}. Requesting KIS unsubscribe...", stockCode);
 
-                // 구독자가 없으면 KIS에 구독 해제 요청
                 if (unsubscribeIfNoSubscribersCallback != null) {
                     unsubscribeIfNoSubscribersCallback.accept(stockCode);
                 }
-                return;  // 메시지 처리 중단
+                return;
             }
 
-            // 데이터를 DTO로 변환
-            StockRealtimeData data = buildStockData(stockInfos);
+            StockRealtimeData data = StockRealtimeData.of(stockInfos);
 
             try {
-                // STOMP를 통해 해당 종목을 구독 중인 클라이언트들에게 브로드캐스트
-                messagingTemplate.convertAndSend("/topic/stock/" + stockCode, data);
-                log.debug("Stock data transmission completed: {}", stockShortCode);
+                String destination = stockDataTopicPrefix + stockCode;
+                messagingTemplate.convertAndSend(destination, data);
+                log.debug("Stock data transmission completed: {} -> {}", stockShortCode, destination);
             } catch (Exception e) {
                 log.error("Error occurred during data transmission - Stock code: {}", stockShortCode, e);
             }
         }
-    }
-
-    /**
-     * 수신한 데이터를 StockRealtimeData DTO로 변환
-     */
-    private StockRealtimeData buildStockData(String[] recvvalue) {
-        // 매도호가 (10단계)
-        List<PriceLevel> askPrices = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
-            askPrices.add(new PriceLevel(
-                    recvvalue[12 - i + 1],  // price
-                    recvvalue[32 - i + 1]   // volume
-            ));
-        }
-
-        // 매수호가 (10단계)
-        List<PriceLevel> bidPrices = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
-            bidPrices.add(new PriceLevel(
-                    recvvalue[12 + i],  // price
-                    recvvalue[32 + i]   // volume
-            ));
-        }
-
-        // 예상 체결 정보
-        ExpectedTrade expectedTrade = new ExpectedTrade(
-                recvvalue[47],  // price
-                recvvalue[48],  // volume
-                recvvalue[49],  // totalVolume
-                recvvalue[50],  // priceChange
-                recvvalue[51],  // priceSign
-                recvvalue[52]   // priceChangeRate
-        );
-
-        return new StockRealtimeData(
-                recvvalue[0],   // stockCode
-                recvvalue[1],   // businessTime
-                recvvalue[2],   // timeCode
-                askPrices,
-                bidPrices,
-                recvvalue[43],  // totalAskVolume
-                recvvalue[54],  // totalAskVolumeChange
-                recvvalue[44],  // totalBidVolume
-                recvvalue[55],  // totalBidVolumeChange
-                recvvalue[45],  // afterHoursTotalAskVolume
-                recvvalue[46],  // afterHoursTotalBidVolume
-                recvvalue[56],  // afterHoursTotalAskVolumeChange
-                recvvalue[57],  // afterHoursTotalBidVolumeChange
-                expectedTrade,
-                recvvalue[53],  // accumulatedVolume
-                recvvalue[58]   // tradeTypeCode
-        );
     }
 }

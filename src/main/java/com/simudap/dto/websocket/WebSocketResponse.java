@@ -7,19 +7,27 @@ package com.simudap.dto.websocket;
 public record WebSocketResponse(
         String status,
         String message,
-        String stockCode
+        String stockCode,
+        String dataEndpoint  // 클라이언트가 구독해야 할 실시간 데이터 엔드포인트
 ) {
     /**
-     * 성공 응답 생성
+     * 성공 응답 생성 (dataEndpoint 포함)
+     */
+    public static WebSocketResponse success(String status, String stockCode, String dataEndpoint) {
+        return new WebSocketResponse(status, null, stockCode, dataEndpoint);
+    }
+
+    /**
+     * 성공 응답 생성 (dataEndpoint 없음)
      */
     public static WebSocketResponse success(String status, String stockCode) {
-        return new WebSocketResponse(status, null, stockCode);
+        return new WebSocketResponse(status, null, stockCode, null);
     }
 
     /**
      * 에러 응답 생성
      */
     public static WebSocketResponse error(String message) {
-        return new WebSocketResponse("error", message, null);
+        return new WebSocketResponse("error", message, null, null);
     }
 }
