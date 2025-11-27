@@ -1,13 +1,10 @@
 package com.simudap.controller;
 
-import com.simudap.service.KisOauthService;
 import com.simudap.service.SchedulerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/api")
@@ -22,7 +19,7 @@ public class HelloController {
     }
 
     @GetMapping("/download")
-    public void testDownload() throws IOException {
+    public void testDownload() {
         schedulerService.downloadKospiFile();
     }
 }

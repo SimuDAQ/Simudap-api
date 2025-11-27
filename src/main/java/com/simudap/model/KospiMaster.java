@@ -1,5 +1,6 @@
 package com.simudap.model;
 
+import com.simudap.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Table(schema = "simudaq")
 @Getter
 @NoArgsConstructor
-public class KospiMaster {
+public class KospiMaster extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,17 +27,26 @@ public class KospiMaster {
     @Column(nullable = false)
     private String nameKr;
 
-    public KospiMaster(String shortCode, String standardCode, String nameKr) {
+    @Column(nullable = false)
+    private boolean isDeListed = false;
+
+    public KospiMaster(String shortCode, String standardCode, String nameKr, boolean isDeListed) {
         this.shortCode = shortCode;
         this.standardCode = standardCode;
         this.nameKr = nameKr;
+        this.isDeListed = isDeListed;
     }
 
-    public KospiMaster update(String shortCode, String standardCode, String nameKr) {
+    public KospiMaster update(String shortCode, String standardCode, String nameKr, boolean isDeListed) {
         this.shortCode = shortCode;
         this.standardCode = standardCode;
         this.nameKr = nameKr;
+        this.isDeListed = isDeListed;
 
         return this;
+    }
+
+    public void updateStatus(boolean isDeListed) {
+        this.isDeListed = isDeListed;
     }
 }
