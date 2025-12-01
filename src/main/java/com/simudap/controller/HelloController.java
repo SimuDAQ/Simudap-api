@@ -1,6 +1,6 @@
 package com.simudap.controller;
 
-import com.simudap.service.SchedulerService;
+import com.simudap.facade.StockInformationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class HelloController {
 
-    private final SchedulerService schedulerService;
+    private final StockInformationFacade stockInformationFacade;
 
     @GetMapping("/hello")
     public String hello() {
@@ -20,6 +20,6 @@ public class HelloController {
 
     @GetMapping("/download")
     public void testDownload() {
-        schedulerService.downloadKospiFile();
+        stockInformationFacade.updateStockInformation();
     }
 }
