@@ -7,13 +7,13 @@ import java.util.List;
 
 public class Responses {
     public static ResponseEntity<ApiResponse<Void>> error(Error error) {
-        ApiResponse<Void> root = ApiResponse.error(error);
-        return ResponseEntity.status(error.getStatus()).body(root);
+        ApiResponse<Void> response = ApiResponse.error(error);
+        return ResponseEntity.status(error.getStatus()).body(response);
     }
 
     public static <T> ResponseEntity<ApiResponse<T>> ok(T body) {
-        ApiResponse<T> root = ApiResponse.of(body);
-        return ResponseEntity.ok(root);
+        ApiResponse<T> response = ApiResponse.of(body);
+        return ResponseEntity.ok(response);
     }
 
     public static <T> ResponseEntity<ApiResponse<ListResponse<T, Void>>> ok(List<T> list) {
