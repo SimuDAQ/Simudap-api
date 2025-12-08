@@ -18,7 +18,6 @@ spring:
 #        show_sql: true
 #    show-sql: true
 
-
 kis:
   app-key: ${APP_KEY}
   app-secret: ${APP_SECRET}
@@ -31,3 +30,14 @@ kis:
 websocket:
   endpoints:
     stock-data-topic: /topic/stock/  # 실시간 주식 시세 데이터 브로드캐스트 토픽
+
+springdoc:
+  packages-to-scan: com.simudap.controller
+  api-docs:
+    path: /docs
+    groups.enabled: false
+  swagger-ui:
+    path: /docs/ui
+    display-operation-id: true
+    syntax-highlight.theme: monokai
+    doc-expansion: none
