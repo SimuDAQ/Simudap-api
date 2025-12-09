@@ -1,9 +1,9 @@
-package com.simudap.dto.kis_oauth;
+package com.simudap.dto.kis.oauth;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record RestApiTokenRequest(
+public record KisApiTokenRequest(
         @JsonProperty("grant_type")
         String grantType,
 
@@ -14,7 +14,7 @@ public record RestApiTokenRequest(
         String appSecret
 
 ) {
-    public RestApiTokenRequest(String appKey, String appSecret) {
+    public KisApiTokenRequest(String appKey, String appSecret) {
         this("client_credentials", appKey, appSecret);
     }
 

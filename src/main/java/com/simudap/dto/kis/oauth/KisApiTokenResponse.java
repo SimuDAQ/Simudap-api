@@ -1,8 +1,8 @@
-package com.simudap.dto.kis_oauth;
+package com.simudap.dto.kis.oauth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record RestApiTokenResponse(
+public record KisApiTokenResponse(
         @JsonProperty("access_token")
         String token,
 

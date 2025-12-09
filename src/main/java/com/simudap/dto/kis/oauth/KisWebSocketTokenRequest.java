@@ -1,8 +1,8 @@
-package com.simudap.dto.kis_oauth;
+package com.simudap.dto.kis.oauth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record WebSocketTokenRequest(
+public record KisWebSocketTokenRequest(
         @JsonProperty("grant_type")
         String grantType,
         @JsonProperty("appkey")
@@ -10,7 +10,7 @@ public record WebSocketTokenRequest(
         @JsonProperty("secretkey")
         String secretKey
 ) {
-    public WebSocketTokenRequest(String appKey, String appSecret) {
+    public KisWebSocketTokenRequest(String appKey, String appSecret) {
         this("client_credentials", appKey, appSecret);
     }
 }

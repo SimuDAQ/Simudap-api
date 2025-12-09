@@ -1,6 +1,6 @@
 package com.simudap.controller;
 
-import com.simudap.dto.kis_websocket.ClientMessage;
+import com.simudap.dto.kis.websocket.ClientMessage;
 import com.simudap.dto.websocket.WebSocketResponse;
 import com.simudap.facade.WebSocketFacade;
 import lombok.RequiredArgsConstructor;

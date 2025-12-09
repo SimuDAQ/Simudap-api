@@ -1,7 +1,7 @@
 package com.simudap.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.simudap.dto.kis_websocket.KisWebSocketRequest;
+import com.simudap.dto.kis.websocket.KisWebSocketRequest;
 import com.simudap.enums.KisRequestType;
 import com.simudap.error.WebSocketOperationException;
 import com.simudap.manager.KisWebSocketConnectionManager;

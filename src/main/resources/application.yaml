@@ -21,6 +21,8 @@ spring:
 kis:
   app-key: ${APP_KEY}
   app-secret: ${APP_SECRET}
+  domain:
+    url: https://openapi.koreainvestment.com:9443
   websocket:
     url: ws://ops.koreainvestment.com:21000  # KIS WebSocket 서버 URL
     max-reconnect-attempts: 10  # 최대 재연결 시도 횟수

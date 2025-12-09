@@ -1,6 +1,6 @@
 package com.simudap.service;
 
-import com.simudap.dto.kis_oauth.KisTokenInfo;
+import com.simudap.dto.kis.oauth.KisTokenInfo;
 import com.simudap.model.KisToken;
 import com.simudap.repository.KisTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 class TokenServiceTest {
 
     @Mock
-    private KisOauthService kisOauthService;
+    private KisApiService kisApiService;
 
     @Mock
     private KisTokenRepository kisTokenRepository;
@@ -66,7 +66,7 @@ class TokenServiceTest {
         // given
         when(kisTokenRepository.findTop1ByOrderByTokenExpiredDesc())
                 .thenReturn(Optional.empty());
-        when(kisOauthService.getToken()).thenReturn(mockTokenInfo);
+        when(kisApiService.getToken()).thenReturn(mockTokenInfo);
         when(kisTokenRepository.save(any(KisToken.class))).thenAnswer(invocation -> invocation.<KisToken>getArgument(0));
 
         // when
@@ -79,7 +79,7 @@ class TokenServiceTest {
         assertThat(result.getTokenExpired()).isEqualTo(mockTokenInfo.getTokenExpired());
 
         verify(kisTokenRepository).findTop1ByOrderByTokenExpiredDesc();
-        verify(kisOauthService).getToken();
+        verify(kisApiService).getToken();
         verify(kisTokenRepository).save(any(KisToken.class));
     }
 
@@ -105,7 +105,7 @@ class TokenServiceTest {
         assertThat(result.getTokenExpired()).isEqualTo(futureExpireTime);
 
         verify(kisTokenRepository).findTop1ByOrderByTokenExpiredDesc();
-        verify(kisOauthService, never()).getToken();
+        verify(kisApiService, never()).getToken();
         verify(kisTokenRepository, never()).save(any(KisToken.class));
     }
 
@@ -127,7 +127,7 @@ class TokenServiceTest {
 
         when(kisTokenRepository.findTop1ByOrderByTokenExpiredDesc())
                 .thenReturn(Optional.of(expiringSoonToken));
-        when(kisOauthService.getToken()).thenReturn(newTokenInfo);
+        when(kisApiService.getToken()).thenReturn(newTokenInfo);
 
         // when
         KisToken result = tokenService.getKisToken();
@@ -139,7 +139,7 @@ class TokenServiceTest {
         assertThat(result.getTokenExpired()).isEqualTo(newTokenInfo.getTokenExpired());
 
         verify(kisTokenRepository).findTop1ByOrderByTokenExpiredDesc();
-        verify(kisOauthService).getToken();
+        verify(kisApiService).getToken();
         // updateToken 메서드가 호출되므로 save는 호출되지 않음 (@Transactional에 의해 자동 저장)
         verify(kisTokenRepository, never()).save(any(KisToken.class));
     }
@@ -167,7 +167,7 @@ class TokenServiceTest {
         assertThat(result.getWebSocketToken()).isEqualTo("existing-websocket-token");
 
         verify(kisTokenRepository).findTop1ByOrderByTokenExpiredDesc();
-        verify(kisOauthService, never()).getToken();
+        verify(kisApiService, never()).getToken();
     }
 
     @Test
@@ -189,7 +189,7 @@ class TokenServiceTest {
 
         when(kisTokenRepository.findTop1ByOrderByTokenExpiredDesc())
                 .thenReturn(Optional.of(tokenExpiresJustUnder12Hours));
-        when(kisOauthService.getToken()).thenReturn(newTokenInfo);
+        when(kisApiService.getToken()).thenReturn(newTokenInfo);
 
         // when
         KisToken result = tokenService.getKisToken();
@@ -200,6 +200,6 @@ class TokenServiceTest {
         assertThat(result.getWebSocketToken()).isEqualTo("new-websocket-token");
 
         verify(kisTokenRepository).findTop1ByOrderByTokenExpiredDesc();
-        verify(kisOauthService).getToken();
+        verify(kisApiService).getToken();
     }
 }
