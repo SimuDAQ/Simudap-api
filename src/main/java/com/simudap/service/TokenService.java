@@ -1,6 +1,6 @@
 package com.simudap.service;
 
-import com.simudap.dto.kis_oauth.KisTokenInfo;
+import com.simudap.dto.kis.oauth.KisTokenInfo;
 import com.simudap.model.KisToken;
 import com.simudap.repository.KisTokenRepository;
 import jakarta.transaction.Transactional;
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TokenService {
 
-    private final KisOauthService kisOauthService;
+    private final KisApiService kisApiService;
 
     private final KisTokenRepository kisTokenRepository;
 
@@ -25,7 +25,7 @@ public class TokenService {
     }
 
     private KisToken saveKisToken() {
-        KisTokenInfo issued = kisOauthService.getToken();
+        KisTokenInfo issued = kisApiService.getToken();
         KisToken newOne = new KisToken(issued.restApiToken(), issued.webSocketToken(), issued.getTokenExpired());
         return kisTokenRepository.save(newOne);
     }
@@ -36,7 +36,7 @@ public class TokenService {
 
         // 2. 토큰 갱신 (최근 토큰 발급 시간 12시간 경과 시)
         if (now.isAfter(expiredAt)) {
-            KisTokenInfo issued = kisOauthService.getToken();
+            KisTokenInfo issued = kisApiService.getToken();
             currToken.updateToken(issued.restApiToken(), issued.webSocketToken(), issued.getTokenExpired());
             return currToken;
         }

@@ -1,4 +1,4 @@
-package com.simudap.dto.kis_oauth;
+package com.simudap.dto.kis.oauth;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

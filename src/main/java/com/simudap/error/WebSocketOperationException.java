@@ -1,8 +1,9 @@
 package com.simudap.error;
 
-/**
- * WebSocket 작업(구독/구독해제) 중 발생하는 예외
- */
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
 public class WebSocketOperationException extends RuntimeException {
 
     public WebSocketOperationException(String message) {

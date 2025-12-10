@@ -1,4 +1,4 @@
-package com.simudap.dto.kis_websocket;
+package com.simudap.dto.kis.websocket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

@@ -1,8 +1,9 @@
 package com.simudap.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.simudap.dto.kis_websocket.KisWebSocketRequest;
-import com.simudap.enums.KisRequestType;
+import com.simudap.dto.kis.websocket.KisWebSocketRequest;
+import com.simudap.enums.kis.KisRequestBody;
+import com.simudap.enums.kis.KisRequestHeader;
 import com.simudap.error.WebSocketOperationException;
 import com.simudap.manager.KisWebSocketConnectionManager;
 import com.simudap.model.KisToken;
@@ -182,13 +183,13 @@ public class KisWebSocketService {
 
         KisWebSocketRequest.Header header = KisWebSocketRequest.Header.of(
                 token.getWebSocketToken(),
-                KisRequestType.CUSTOMER_TYPE_P.getValue(),
-                KisRequestType.TRADE_TYPE_REGISTRATION.getValue(),
+                KisRequestHeader.CUSTOMER_TYPE_P.getValue(),
+                KisRequestHeader.TRADE_TYPE_REGISTRATION.getValue(),
                 StandardCharsets.UTF_8.name()
         );
 
         KisWebSocketRequest.Body body = KisWebSocketRequest.Body.of(
-                KisRequestType.TRADE_ID_INTEGRATION.getValue(),
+                KisRequestBody.TRADE_ID_UN.getValue(),
                 stockCode
         );
 
@@ -200,13 +201,13 @@ public class KisWebSocketService {
 
         KisWebSocketRequest.Header header = KisWebSocketRequest.Header.of(
                 token.getWebSocketToken(),  // approval_key
-                KisRequestType.CUSTOMER_TYPE_P.getValue(),
-                KisRequestType.TRADE_TYPE_UNREGISTRATION.getValue(),
+                KisRequestHeader.CUSTOMER_TYPE_P.getValue(),
+                KisRequestHeader.TRADE_TYPE_UNREGISTRATION.getValue(),
                 StandardCharsets.UTF_8.name()
         );
 
         KisWebSocketRequest.Body body = KisWebSocketRequest.Body.of(
-                KisRequestType.TRADE_ID_INTEGRATION.getValue(),
+                KisRequestBody.TRADE_ID_UN.getValue(),
                 stockCode
         );
 

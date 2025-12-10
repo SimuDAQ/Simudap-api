@@ -1,4 +1,4 @@
-package com.simudap.config;
+package com.simudap.config.handler;
 
 import com.simudap.manager.ClientStockSubscriptionManager;
 import com.simudap.service.KisWebSocketService;
