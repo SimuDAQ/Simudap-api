@@ -1,9 +1,8 @@
 package com.simudap.facade;
 
 import com.simudap.dto.kis.KisChartDataRequest;
-import com.simudap.error.ResourceNotFoundException;
+import com.simudap.dto.kis.KisChartDataResponse;
 import com.simudap.model.KisToken;
-import com.simudap.model.kospi.KospiMaster;
 import com.simudap.service.KisApiService;
 import com.simudap.service.TokenService;
 import com.simudap.service.kospi.KospiMasterService;
@@ -18,14 +17,14 @@ public class ChartFacade {
     private final KisApiService kisApiService;
     private final KospiMasterService kospiMasterService;
 
-    public void getChart(String stockCode, String interval, String from, String count) {
-        String shortCode = kospiMasterService.findByShortCode(stockCode)
-                .map(KospiMaster::getShortCode)
-                .orElseThrow(() -> new ResourceNotFoundException("There is no stock with code " + stockCode));
+    public KisChartDataResponse getChart(String stockCode, String interval, String from, String count) {
+//        String shortCode = kospiMasterService.findByShortCode(stockCode)
+//                .map(KospiMaster::getShortCode)
+//                .orElseThrow(() -> new ResourceNotFoundException("There is no stock with code " + stockCode));
+        String shortCode = stockCode;
         KisToken kisToken = tokenService.getKisToken();
 
         KisChartDataRequest request = KisChartDataRequest.parse(shortCode, interval, from, count);
-
-        kisApiService.getChartData(request, kisToken);
+        return kisApiService.getChartData(request, kisToken);
     }
 }

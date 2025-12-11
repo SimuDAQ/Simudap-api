@@ -6,7 +6,6 @@ import com.simudap.error.ResourceNotFoundException;
 import com.simudap.util.TimeUtils;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -21,41 +20,35 @@ public class KisChartDataRequest {
     // 현재 지원하는 분봉 : 1, 3, 5, 10, 15, 30, 60
     private static final List<Integer> MINUTE_INTERVALS = List.of(1, 3, 5, 10, 15, 30, 60);
     private static final int PERIOD_MAX_VALUE = 100;
+
     // tr_id
     private static final String CHART_MIN_TODAY_TR_ID = "FHKST03010200";
     private static final String CHART_MIN_PAST_TR_ID = "FHKST03010230";
     private static final String CHART_TIMEFRAME_TR_ID = "FHKST03010100";
+
     private final String stockCode;
     private final ChartInterval interval;
     private final int intervalValue;
     private final LocalDateTime from;
     private final String count;
-    private final String path;
     private final String trId;
     private static final int DEFAULT_INTERVAL_VALUE = 1;
     private final MultiValueMap<String, String> params;
-    // 당일 분봉 조회(당일 장 운영시간의 분봉 조회는 이게 더 빠름)
-    @Value("${kis.path.chart-min-today}")
-    private String chartMinTodayPath;
-    // 일별 분봉 조회
-    @Value("${kis.path.chart-min-past}")
-    private String chartMinPastPath;
-    // 기간(일/주/월/년) 별 조회
-    @Value("${kis.path.chart-period}")
-    private String chartPeriodPath;
 
-    private KisChartDataRequest(String stockCode, String interval, String from, String count) {
-        String[] split = interval.split(":");
+    private KisChartDataRequest(String stockCode, String intervalStr, String from, String count) {
+        String[] interval = intervalStr.split(":");
+        LocalDateTime dateTime = TimeUtils.toLocalDateTime1(from);
+        boolean isToday = isToday(dateTime.toLocalDate());
 
-        if (split.length < 2) {
+        if (interval.length < 2) {
             throw new BadRequestException("Invalid interval");
         }
 
-        ChartInterval chartInterval = ChartInterval.from(split[0]);
-        int intervalNum = Integer.parseInt(split[1]);
+        ChartInterval chartInterval = ChartInterval.from(interval[0], isToday);
+        int intervalNum = Integer.parseInt(interval[1]);
         int intervalValue;
 
-        if (chartInterval == ChartInterval.MIN) {
+        if (chartInterval == ChartInterval.MIN_TODAY || chartInterval == ChartInterval.MIN_PAST) {
             intervalValue = MINUTE_INTERVALS
                     .stream()
                     .filter(value -> value == intervalNum)
@@ -66,8 +59,6 @@ public class KisChartDataRequest {
             intervalValue = DEFAULT_INTERVAL_VALUE;
         }
 
-        LocalDateTime dateTime = TimeUtils.toLocalDateTime(from);
-
         this.stockCode = stockCode;
         this.interval = chartInterval;
         this.intervalValue = intervalValue;
@@ -75,12 +66,13 @@ public class KisChartDataRequest {
         this.count = count;
 
         // 분봉 조회일 경우 날짜 기준으로 당일 분봉 조회 or 과거 분봉 조회 결정
-        if (chartInterval == ChartInterval.MIN) {
-            this.path = isToday(dateTime.toLocalDate()) ? chartMinTodayPath : chartMinPastPath;
-            this.trId = isToday(dateTime.toLocalDate()) ? CHART_MIN_TODAY_TR_ID : CHART_MIN_PAST_TR_ID;
-            this.params = isToday(dateTime.toLocalDate()) ? buildTodayParams(stockCode, dateTime) : buildPastParams(stockCode, dateTime);
+        if (chartInterval == ChartInterval.MIN_TODAY) {
+            this.trId = CHART_MIN_TODAY_TR_ID;
+            this.params = buildTodayParams(stockCode, dateTime);
+        } else if (chartInterval == ChartInterval.MIN_PAST) {
+            this.trId = CHART_MIN_PAST_TR_ID;
+            this.params = buildPastParams(stockCode, dateTime);
         } else {
-            this.path = chartPeriodPath;
             this.trId = CHART_TIMEFRAME_TR_ID;
             this.params = buildPeriodParams(stockCode, chartInterval, dateTime);
         }
@@ -149,8 +141,9 @@ public class KisChartDataRequest {
 
     @Getter
     @RequiredArgsConstructor
-    private enum ChartInterval {
-        MIN(null),
+    public enum ChartInterval {
+        MIN_TODAY(null),
+        MIN_PAST(null),
         DAY("D"),
         WEEK("W"),
         MONTH("M"),
@@ -159,7 +152,11 @@ public class KisChartDataRequest {
 
         private final String value;
 
-        public static ChartInterval from(String interval) {
+        public static ChartInterval from(String interval, boolean isToday) {
+            if (interval.equalsIgnoreCase("min")) {
+                return isToday ? MIN_TODAY : MIN_PAST;
+            }
+
             return Arrays.stream(ChartInterval.values())
                     .filter(value -> value.name().equalsIgnoreCase(interval))
                     .findFirst()
