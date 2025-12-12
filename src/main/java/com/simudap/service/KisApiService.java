@@ -2,8 +2,8 @@ package com.simudap.service;
 
 import com.simudap.dto.kis.KisChartDataRequest;
 import com.simudap.dto.kis.KisChartDataResponse;
-import com.simudap.dto.kis.KisChartMinPast;
-import com.simudap.dto.kis.KisChartMinToday;
+import com.simudap.dto.kis.KisChartMin;
+import com.simudap.dto.kis.KisChartPeriod;
 import com.simudap.dto.kis.oauth.*;
 import com.simudap.enums.kis.KisRequestHeader;
 import com.simudap.error.ExternalApiCallException;
@@ -64,12 +64,12 @@ public class KisApiService {
         return new KisTokenInfo(apiToken.token(), webSocketToken.approvalKey(), apiToken.tokenExpired());
     }
 
-    // TODO : minPast, period response 통합 로직 추가 필요
+    // TODO: 1분봉 이상은 분봉 별 합산하여 평균 값 도출 필요
     public KisChartDataResponse getChartData(KisChartDataRequest request, KisToken kisToken) {
         KisChartRequestSimple simple = switch (request.getInterval()) {
-            case MIN_TODAY -> new KisChartRequestSimple(chartMinTodayPath, KisChartMinToday.class);
-            case MIN_PAST -> new KisChartRequestSimple(chartMinPastPath, KisChartMinPast.class);
-            case DAY, WEEK, MONTH, YEAR -> new KisChartRequestSimple(chartPeriodPath, KisChartDataResponse.class);
+            case MIN_TODAY -> new KisChartRequestSimple(chartMinTodayPath, KisChartMin.class);
+            case MIN_PAST -> new KisChartRequestSimple(chartMinPastPath, KisChartMin.class);
+            case DAY, WEEK, MONTH, YEAR -> new KisChartRequestSimple(chartPeriodPath, KisChartPeriod.class);
         };
 
         Object response = requestTo(
@@ -79,11 +79,15 @@ public class KisApiService {
                 simple.responseType()
         );
 
-        if (response instanceof KisChartMinToday today) {
-            return KisChartDataResponse.of(request.getStockCode(), request.getIntervalValue(), today);
-        }
+        if (response instanceof KisChartMin min) {
+            return KisChartDataResponse.of(request.getStockCode(), request.getInterval(), request.getIntervalValue(), min);
 
-        return null;
+        } else if (response instanceof KisChartPeriod period) {
+            return KisChartDataResponse.of(request.getStockCode(), request.getInterval(), request.getIntervalValue(), period);
+
+        } else {
+            throw new ExternalApiCallException("Unknown response type");
+        }
     }
 
     private <REQ, RES> RES requestTo(HttpMethod method, String uri, HttpEntity<REQ> entity, Class<RES> responseType) {

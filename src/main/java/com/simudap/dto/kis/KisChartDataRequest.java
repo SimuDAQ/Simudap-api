@@ -1,5 +1,6 @@
 package com.simudap.dto.kis;
 
+import com.simudap.enums.ChartInterval;
 import com.simudap.enums.kis.KisRequestParam;
 import com.simudap.error.BadRequestException;
 import com.simudap.error.ResourceNotFoundException;
@@ -11,7 +12,6 @@ import org.springframework.util.MultiValueMap;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 
 @Getter
@@ -34,6 +34,10 @@ public class KisChartDataRequest {
     private final String trId;
     private static final int DEFAULT_INTERVAL_VALUE = 1;
     private final MultiValueMap<String, String> params;
+
+    public static KisChartDataRequest parse(String stockCode, String interval, String from, String count) {
+        return new KisChartDataRequest(stockCode, interval, from, count);
+    }
 
     private KisChartDataRequest(String stockCode, String intervalStr, String from, String count) {
         String[] interval = intervalStr.split(":");
@@ -78,10 +82,6 @@ public class KisChartDataRequest {
         }
     }
 
-    public static KisChartDataRequest parse(String stockCode, String interval, String from, String count) {
-        return new KisChartDataRequest(stockCode, interval, from, count);
-    }
-
     private boolean isToday(LocalDate searchDate) {
         LocalDate today = TimeUtils.seoulNow().toLocalDate();
         return searchDate.isEqual(today);
@@ -117,7 +117,7 @@ public class KisChartDataRequest {
         map.add(KisRequestParam.FID_INPUT_DATE_1.name(), TimeUtils.toDateString(pastDateTime));
         map.add(KisRequestParam.FID_INPUT_DATE_2.name(), TimeUtils.toDateString(dateTime));
         map.add(KisRequestParam.FID_PERIOD_DIV_CODE.name(), interval.getValue());
-        map.add(KisRequestParam.FID_FAKE_TICK_INCU_YN.name(), "");
+        map.add(KisRequestParam.FID_ORG_ADJ_PRC.name(), "0");
         return map;
     }
 
@@ -137,30 +137,5 @@ public class KisChartDataRequest {
         }
 
         return dateTime.minusDays(PERIOD_MAX_VALUE);
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public enum ChartInterval {
-        MIN_TODAY(null),
-        MIN_PAST(null),
-        DAY("D"),
-        WEEK("W"),
-        MONTH("M"),
-        YEAR("Y"),
-        ;
-
-        private final String value;
-
-        public static ChartInterval from(String interval, boolean isToday) {
-            if (interval.equalsIgnoreCase("min")) {
-                return isToday ? MIN_TODAY : MIN_PAST;
-            }
-
-            return Arrays.stream(ChartInterval.values())
-                    .filter(value -> value.name().equalsIgnoreCase(interval))
-                    .findFirst()
-                    .orElseThrow(() -> new ResourceNotFoundException("Not found interval " + interval));
-        }
     }
 }

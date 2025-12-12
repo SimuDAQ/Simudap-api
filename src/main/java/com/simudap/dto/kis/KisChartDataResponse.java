@@ -1,34 +1,70 @@
 package com.simudap.dto.kis;
 
+import com.simudap.enums.ChartInterval;
 import com.simudap.util.TimeUtils;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
-public record KisChartDataResponse(
-        String code,
-        LocalDateTime nextDateTime,
-        List<Candle> candles
-) {
-    public static KisChartDataResponse of(String stockCode, int interval, KisChartMinToday minToday) {
-        KisChartMinToday.Output1 output1 = minToday.output1();
-        String base = output1.stckPrdyClpr();
-        List<Candle> candles = minToday.output2()
+@Getter
+@RequiredArgsConstructor
+public class KisChartDataResponse {
+    private final String stockCode;
+    private final LocalDateTime nextDateTime;
+    private final List<Chart> candles;
+
+    private KisChartDataResponse(String stockCode, ChartInterval interval, int intervalValue, KisChartMin minToday) {
+        KisChartMin.CurrentStockInfo stockInfo = minToday.currentStockInfo();
+        List<Chart> charts = minToday.chartDataList()
                 .stream()
-                .map(output2 -> {
-                    return Candle.of(Long.parseLong(base), output2);
-                })
-                .sorted(Comparator.comparing(Candle::dateTime).reversed())
+                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
+                .sorted(Comparator.comparing(Chart::dateTime).reversed())
                 .toList();
 
-        Candle last = candles.getLast();
-        LocalDateTime nextDateTime = last.dateTime().minusMinutes(interval);
+        LocalDateTime nextDateTime = getNextDateTime(interval, intervalValue, charts.getLast().dateTime());
 
-        return new KisChartDataResponse(stockCode, nextDateTime, candles);
+        this.stockCode = stockCode;
+        this.nextDateTime = nextDateTime;
+        this.candles = charts;
     }
 
-    private record Candle(
+    private KisChartDataResponse(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
+        KisChartPeriod.CurrentStockInfo stockInfo = period.currentStockInfo();
+        List<Chart> charts = period.chartDataList()
+                .stream()
+                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
+                .sorted(Comparator.comparing(Chart::dateTime).reversed())
+                .toList();
+
+        LocalDateTime nextDateTime = getNextDateTime(interval, intervalValue, charts.getLast().dateTime());
+
+        this.stockCode = stockCode;
+        this.nextDateTime = nextDateTime;
+        this.candles = charts;
+    }
+
+    public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartMin minToday) {
+        return new KisChartDataResponse(stockCode, interval, intervalValue, minToday);
+    }
+
+    public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
+        return new KisChartDataResponse(stockCode, interval, intervalValue, period);
+    }
+
+    private LocalDateTime getNextDateTime(ChartInterval interval, int intervalValue, LocalDateTime lastCandleTime) {
+        return switch (interval) {
+            case DAY -> lastCandleTime.minusDays(intervalValue);
+            case WEEK -> lastCandleTime.minusWeeks(intervalValue);
+            case MONTH -> lastCandleTime.minusMonths(intervalValue);
+            case YEAR -> lastCandleTime.minusYears(intervalValue);
+            case MIN_TODAY, MIN_PAST -> lastCandleTime.minusMinutes(intervalValue);
+        };
+    }
+
+    private record Chart(
             LocalDateTime dateTime,
             long base,
             long open,
@@ -38,17 +74,31 @@ public record KisChartDataResponse(
             long volume,
             long accumulatedAmount
     ) {
-        public static Candle of(long base, KisChartMinToday.Output2 output2) {
-            LocalDateTime dateTime = TimeUtils.toLocalDateTime2(output2.stckBsopDate() + output2.stckCntgHour());
-            return new Candle(
+        public static Chart of(long base, KisChartMin.ChartData chartData) {
+            LocalDateTime dateTime = TimeUtils.toLocalDateTime2(chartData.businessDate() + chartData.tradingTime());
+            return new Chart(
                     dateTime,
                     base,
-                    Long.parseLong(output2.stckOprc()),
-                    Long.parseLong(output2.stckHgpr()),
-                    Long.parseLong(output2.stckLwpr()),
-                    Long.parseLong(output2.stckPrpr()),
-                    Long.parseLong(output2.cntgVol()),
-                    Long.parseLong(output2.acmlTrPbmn())
+                    Long.parseLong(chartData.openingPrice()),
+                    Long.parseLong(chartData.highPrice()),
+                    Long.parseLong(chartData.lowPrice()),
+                    Long.parseLong(chartData.closingPrice()),
+                    Long.parseLong(chartData.tradingVolume()),
+                    Long.parseLong(chartData.accumulatedTradingAmount())
+            );
+        }
+
+        public static Chart of(long base, KisChartPeriod.ChartData chartData) {
+            LocalDateTime dateTime = TimeUtils.toLocalDateTime3(chartData.businessDate());
+            return new Chart(
+                    dateTime,
+                    base,
+                    Long.parseLong(chartData.openingPrice()),
+                    Long.parseLong(chartData.highPrice()),
+                    Long.parseLong(chartData.lowPrice()),
+                    Long.parseLong(chartData.closingPrice()),
+                    Long.parseLong(chartData.accumulatedVolume()),
+                    Long.parseLong(chartData.accumulatedTradingAmount())
             );
         }
     }
