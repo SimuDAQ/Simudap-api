@@ -21,7 +21,7 @@ import java.util.zip.ZipInputStream;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockInformationDownloadService {
+public class StockInfoDownloadService {
 
     private final RestTemplate restTemplate;
 
