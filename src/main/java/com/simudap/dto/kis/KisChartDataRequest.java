@@ -19,7 +19,10 @@ import java.util.List;
 public class KisChartDataRequest {
     // 현재 지원하는 분봉 : 1, 3, 5, 10, 15, 30, 60
     private static final List<Integer> MINUTE_INTERVALS = List.of(1, 3, 5, 10, 15, 30, 60);
+    private static final int MIN_TODAY_REQUEST_MAX = 30;
+    private static final int MIN_PAST_REQUEST_MAX = 120;
     private static final int PERIOD_MAX_VALUE = 100;
+    private static final int DEFAULT_INTERVAL_VALUE = 1;
 
     // tr_id
     private static final String CHART_MIN_TODAY_TR_ID = "FHKST03010200";
@@ -30,9 +33,8 @@ public class KisChartDataRequest {
     private final ChartInterval interval;
     private final int intervalValue;
     private final LocalDateTime from;
-    private final String count;
+    private final int count;
     private final String trId;
-    private static final int DEFAULT_INTERVAL_VALUE = 1;
     private final MultiValueMap<String, String> params;
 
     public static KisChartDataRequest parse(String stockCode, String interval, String from, String count) {
@@ -58,6 +60,7 @@ public class KisChartDataRequest {
                     .filter(value -> value == intervalNum)
                     .findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException("Invalid interval"));
+
         } else {
             // 분봉 이외에는 간격 1 고정
             intervalValue = DEFAULT_INTERVAL_VALUE;
@@ -67,7 +70,7 @@ public class KisChartDataRequest {
         this.interval = chartInterval;
         this.intervalValue = intervalValue;
         this.from = dateTime;
-        this.count = count;
+        this.count = Integer.parseInt(count);
 
         // 분봉 조회일 경우 날짜 기준으로 당일 분봉 조회 or 과거 분봉 조회 결정
         if (chartInterval == ChartInterval.MIN_TODAY) {

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Getter
 @RequiredArgsConstructor
@@ -15,21 +17,6 @@ public class KisChartDataResponse {
     private final String stockCode;
     private final LocalDateTime nextDateTime;
     private final List<Chart> candles;
-
-    private KisChartDataResponse(String stockCode, ChartInterval interval, int intervalValue, KisChartMin minToday) {
-        KisChartMin.CurrentStockInfo stockInfo = minToday.currentStockInfo();
-        List<Chart> charts = minToday.chartDataList()
-                .stream()
-                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
-                .sorted(Comparator.comparing(Chart::dateTime).reversed())
-                .toList();
-
-        LocalDateTime nextDateTime = getNextDateTime(interval, intervalValue, charts.getLast().dateTime());
-
-        this.stockCode = stockCode;
-        this.nextDateTime = nextDateTime;
-        this.candles = charts;
-    }
 
     private KisChartDataResponse(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
         KisChartPeriod.CurrentStockInfo stockInfo = period.currentStockInfo();
@@ -46,12 +33,72 @@ public class KisChartDataResponse {
         this.candles = charts;
     }
 
-    public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartMin minToday) {
-        return new KisChartDataResponse(stockCode, interval, intervalValue, minToday);
+    private KisChartDataResponse(String stockCode, ChartInterval interval, int intervalValue, List<KisChartMin> mins) {
+        if (mins.isEmpty()) {
+            throw new IllegalArgumentException("KisChartMin list is empty");
+        }
+
+        KisChartMin.CurrentStockInfo stockInfo = mins.getFirst().currentStockInfo();
+
+
+        List<Chart> charts = mins.stream()
+                .flatMap(min -> min.chartDataList().stream())
+                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
+                .sorted(Comparator.comparing(Chart::dateTime))
+                .distinct()
+                .toList();
+
+        List<Chart> processedCharts = intervalValue > 1 ? mergeCandles(charts, intervalValue) : charts;
+
+        List<Chart> sortedCharts = processedCharts.stream()
+                .sorted(Comparator.comparing(Chart::dateTime).reversed())
+                .toList();
+
+        LocalDateTime nextDateTime = getNextDateTime(interval, intervalValue, sortedCharts.getLast().dateTime());
+
+        this.stockCode = stockCode;
+        this.nextDateTime = nextDateTime;
+        this.candles = sortedCharts;
+    }
+
+    public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, List<KisChartMin> mins) {
+        return new KisChartDataResponse(stockCode, interval, intervalValue, mins);
     }
 
     public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
         return new KisChartDataResponse(stockCode, interval, intervalValue, period);
+    }
+
+    // 1분봉 데이터를 시간 기준으로 intervalValue 단위로 병합
+    // 예: 3분봉의 경우 09:01~09:03 → 09:03 3분봉, 09:04~09:06 → 09:06 3분봉
+    private List<Chart> mergeCandles(List<Chart> charts, int intervalValue) {
+        Map<Long, List<Chart>> groupedByTime = charts.stream()
+                .collect(Collectors.groupingBy(chart -> {
+                    LocalDateTime dt = chart.dateTime();
+                    long totalMinutes = TimeUtils.toMinutesFromEpoch(dt);
+                    return (totalMinutes + intervalValue - 1) / intervalValue;
+                }));
+
+        return groupedByTime.values().stream()
+                .filter(chartList -> chartList.size() == intervalValue) // 완전한 봉만 생성
+                .map(group -> {
+                    group.sort(Comparator.comparing(Chart::dateTime));
+
+                    Chart first = group.getFirst();
+                    Chart last = group.getLast();
+
+                    long open = first.open();
+                    long close = last.close();
+                    long high = group.stream().mapToLong(Chart::high).max().orElse(0);
+                    long low = group.stream().mapToLong(Chart::low).min().orElse(0);
+                    long volume = group.stream().mapToLong(Chart::volume).sum();
+                    long accumulatedAmount = last.accumulatedAmount();
+                    LocalDateTime dateTime = last.dateTime();
+
+                    return new Chart(dateTime, first.base(), open, high, low, close, volume, accumulatedAmount);
+                })
+                .sorted(Comparator.comparing(Chart::dateTime))
+                .toList();
     }
 
     private LocalDateTime getNextDateTime(ChartInterval interval, int intervalValue, LocalDateTime lastCandleTime) {
