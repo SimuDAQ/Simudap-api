@@ -126,7 +126,7 @@ public class KisApiService {
 
     private LocalDateTime adjustToMarketTime(LocalDateTime dateTime) {
         LocalDateTime marketStart = dateTime.toLocalDate().atTime(9, 0);
-        LocalDateTime marketClosing = dateTime.toLocalDate().atTime(15, 30);
+        LocalDateTime marketClosing = dateTime.toLocalDate().atTime(15, 19);
 
         if (dateTime.isBefore(marketStart)) {
             return marketClosing.minusDays(1);
