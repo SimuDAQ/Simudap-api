@@ -38,12 +38,6 @@ public class TimeUtils {
         return dateTime.format(TIME_FORMATTER);
     }
 
-    /**
-     * Epoch(1970-01-01 00:00)부터 주어진 시간까지의 총 분 수를 계산
-     *
-     * @param dateTime 계산할 시간 (로컬 시간 기준)
-     * @return Epoch부터의 총 분 수
-     */
     public static long toMinutesFromEpoch(LocalDateTime dateTime) {
         LocalDateTime epoch = LocalDate.ofEpochDay(0).atStartOfDay();
         return ChronoUnit.MINUTES.between(epoch, dateTime);

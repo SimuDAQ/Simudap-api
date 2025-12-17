@@ -19,8 +19,6 @@ import java.util.List;
 public class KisChartDataRequest {
     // 현재 지원하는 분봉 : 1, 3, 5, 10, 15, 30, 60
     private static final List<Integer> MINUTE_INTERVALS = List.of(1, 3, 5, 10, 15, 30, 60);
-    private static final int MIN_TODAY_REQUEST_MAX = 30;
-    private static final int MIN_PAST_REQUEST_MAX = 120;
     private static final int PERIOD_MAX_VALUE = 100;
     private static final int DEFAULT_INTERVAL_VALUE = 1;
 
