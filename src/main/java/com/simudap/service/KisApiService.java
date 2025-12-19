@@ -5,19 +5,27 @@ import com.simudap.dto.kis.KisChartDataResponse;
 import com.simudap.dto.kis.KisChartMin;
 import com.simudap.dto.kis.KisChartPeriod;
 import com.simudap.dto.kis.oauth.*;
+import com.simudap.enums.ChartInterval;
 import com.simudap.enums.kis.KisRequestHeader;
+import com.simudap.enums.kis.KisRequestParam;
 import com.simudap.error.ExternalApiCallException;
 import com.simudap.error.ResourceNotFoundException;
 import com.simudap.model.KisToken;
+import com.simudap.util.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -64,30 +72,88 @@ public class KisApiService {
         return new KisTokenInfo(apiToken.token(), webSocketToken.approvalKey(), apiToken.tokenExpired());
     }
 
-    // TODO: 1분봉 이상은 분봉 별 합산하여 평균 값 도출 필요
     public KisChartDataResponse getChartData(KisChartDataRequest request, KisToken kisToken) {
-        KisChartRequestSimple simple = switch (request.getInterval()) {
-            case MIN_TODAY -> new KisChartRequestSimple(chartMinTodayPath, KisChartMin.class);
-            case MIN_PAST -> new KisChartRequestSimple(chartMinPastPath, KisChartMin.class);
-            case DAY, WEEK, MONTH, YEAR -> new KisChartRequestSimple(chartPeriodPath, KisChartPeriod.class);
-        };
+        if (request.getInterval() == ChartInterval.MIN_PAST) {
+            return getChartMin(request, kisToken);
+        }
 
-        Object response = requestTo(
+        return getChartPeriod(request, kisToken);
+    }
+
+    private KisChartDataResponse getChartMin(KisChartDataRequest request, KisToken kisToken) {
+        // Kis API 유량제한 : 20/sec, 일별 분봉 : 1회 최대 120 개 조회 가능
+        // 1분봉 이상의 데이터 합산 처리시 데이터 잘리는 걸 방지하기 위해 요청수 보다 + 1 하여 Kis 요청 후 server 단에서 잘라서 제공
+        int requiredCandleCnt = request.getIntervalValue() * (request.getCount() + 1);
+        int requiredApiCallCnt = requiredCandleCnt / 120;
+
+        List<CompletableFuture<KisChartMin>> chartMinFutures = buildSearchFromList(requiredApiCallCnt, request.getFrom())
+                .stream()
+                .map(searchDateTime -> CompletableFuture.supplyAsync(() ->
+                        requestTo(
+                                HttpMethod.GET,
+                                buildUrl(chartMinPastPath, buildPastParams(request.getStockCode(), searchDateTime)),
+                                new HttpEntity<>(buildHeaders(request.getTrId(), kisToken)),
+                                KisChartMin.class
+                        )
+                ))
+                .toList();
+
+        List<KisChartMin> allChartMins = chartMinFutures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        return KisChartDataResponse.of(request, allChartMins);
+    }
+
+    private List<LocalDateTime> buildSearchFromList(int requiredApiCallCnt, LocalDateTime currentFrom) {
+        List<LocalDateTime> fromList = new ArrayList<>();
+
+        for (int i = 1; i <= requiredApiCallCnt; i++) {
+            LocalDateTime adjustedTime = adjustToMarketTime(currentFrom);
+            fromList.add(adjustedTime);
+
+            currentFrom = adjustedTime.minusMinutes(120);
+        }
+
+        return fromList;
+    }
+
+    private LocalDateTime adjustToMarketTime(LocalDateTime dateTime) {
+        LocalDateTime marketStart = dateTime.toLocalDate().atTime(9, 0);
+        LocalDateTime marketClosing = dateTime.toLocalDate().atTime(15, 19);
+
+        if (dateTime.isBefore(marketStart)) {
+            return marketClosing.minusDays(1);
+        }
+
+        // 15:30 이후면 15:30으로 조정
+        if (dateTime.isAfter(marketClosing)) {
+            return marketClosing;
+        }
+
+        return dateTime;
+    }
+
+    private MultiValueMap<String, String> buildPastParams(String stockCode, LocalDateTime dateTime) {
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add(KisRequestParam.FID_COND_MRKT_DIV_CODE.name(), "J");
+        map.add(KisRequestParam.FID_INPUT_ISCD.name(), stockCode);
+        map.add(KisRequestParam.FID_INPUT_HOUR_1.name(), TimeUtils.toTimeString(dateTime));
+        map.add(KisRequestParam.FID_INPUT_DATE_1.name(), TimeUtils.toDateString(dateTime));
+        map.add(KisRequestParam.FID_PW_DATA_INCU_YN.name(), "Y");
+        map.add(KisRequestParam.FID_FAKE_TICK_INCU_YN.name(), "");
+        return map;
+    }
+
+    public KisChartDataResponse getChartPeriod(KisChartDataRequest request, KisToken kisToken) {
+        KisChartPeriod response = requestTo(
                 HttpMethod.GET,
-                buildUrl(simple.path(), request.getParams()),
+                buildUrl(chartPeriodPath, request.getParams()),
                 new HttpEntity<>(buildHeaders(request.getTrId(), kisToken)),
-                simple.responseType()
+                KisChartPeriod.class
         );
 
-        if (response instanceof KisChartMin min) {
-            return KisChartDataResponse.of(request.getStockCode(), request.getInterval(), request.getIntervalValue(), min);
-
-        } else if (response instanceof KisChartPeriod period) {
-            return KisChartDataResponse.of(request.getStockCode(), request.getInterval(), request.getIntervalValue(), period);
-
-        } else {
-            throw new ExternalApiCallException("Unknown response type");
-        }
+        return KisChartDataResponse.of(request.getStockCode(), request.getInterval(), request.getIntervalValue(), response);
     }
 
     private <REQ, RES> RES requestTo(HttpMethod method, String uri, HttpEntity<REQ> entity, Class<RES> responseType) {
@@ -133,12 +199,12 @@ public class KisApiService {
         return headers;
     }
 
-    private record KisChartRequestSimple(
+    private record KisChartSimple(
             String path,
             Class<?> responseType
     ) {
-        public static KisChartRequestSimple of(String path, Class<?> responseType) {
-            return new KisChartRequestSimple(path, responseType);
+        public static KisChartSimple of(String path, Class<?> responseType) {
+            return new KisChartSimple(path, responseType);
         }
     }
 }

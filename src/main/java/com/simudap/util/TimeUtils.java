@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 public class TimeUtils {
     private static final ZoneId seoul = ZoneId.of("Asia/Seoul");
@@ -35,5 +36,10 @@ public class TimeUtils {
 
     public static String toTimeString(LocalDateTime dateTime) {
         return dateTime.format(TIME_FORMATTER);
+    }
+
+    public static long toMinutesFromEpoch(LocalDateTime dateTime) {
+        LocalDateTime epoch = LocalDate.ofEpochDay(0).atStartOfDay();
+        return ChronoUnit.MINUTES.between(epoch, dateTime);
     }
 }
