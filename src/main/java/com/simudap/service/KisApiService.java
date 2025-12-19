@@ -81,11 +81,10 @@ public class KisApiService {
     }
 
     private KisChartDataResponse getChartMin(KisChartDataRequest request, KisToken kisToken) {
-        // Kis API 유량제한 : 20/sec
-        // 일별 분봉 : 1회 최대 120 개 조회
-        // ex) totalMinCount: intervalValue: 3분 * count: 90개 = 270개
-        int requiredCandleCnt = request.getIntervalValue() * request.getCount();
-        int requiredApiCallCnt = requiredCandleCnt % 120 > 0 ? requiredCandleCnt / 120 + 1 : requiredCandleCnt / 120;
+        // Kis API 유량제한 : 20/sec, 일별 분봉 : 1회 최대 120 개 조회 가능
+        // 1분봉 이상의 데이터 합산 처리시 데이터 잘리는 걸 방지하기 위해 요청수 보다 + 1 하여 Kis 요청 후 server 단에서 잘라서 제공
+        int requiredCandleCnt = request.getIntervalValue() * (request.getCount() + 1);
+        int requiredApiCallCnt = requiredCandleCnt / 120;
 
         List<CompletableFuture<KisChartMin>> chartMinFutures = buildSearchFromList(requiredApiCallCnt, request.getFrom())
                 .stream()
@@ -103,12 +102,7 @@ public class KisApiService {
                 .map(CompletableFuture::join)
                 .toList();
 
-        return KisChartDataResponse.of(
-                request.getStockCode(),
-                request.getInterval(),
-                request.getIntervalValue(),
-                allChartMins
-        );
+        return KisChartDataResponse.of(request, allChartMins);
     }
 
     private List<LocalDateTime> buildSearchFromList(int requiredApiCallCnt, LocalDateTime currentFrom) {
