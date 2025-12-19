@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +39,10 @@ public class KisChartDataResponse {
             throw new IllegalArgumentException("KisChartMin list is empty");
         }
 
-        KisChartMin.CurrentStockInfo stockInfo = mins.getFirst().currentStockInfo();
-
-
         List<Chart> charts = mins.stream()
-                .flatMap(min -> min.chartDataList().stream())
-                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
-                .sorted(Comparator.comparing(Chart::dateTime))
+                .map(this::convertToCharts)
+                .flatMap(Collection::stream)
+                .sorted(Comparator.comparing(Chart::dateTime).reversed())
                 .distinct()
                 .toList();
 
@@ -59,6 +57,14 @@ public class KisChartDataResponse {
         this.stockCode = stockCode;
         this.nextDateTime = nextDateTime;
         this.candles = sortedCharts;
+    }
+
+    private List<Chart> convertToCharts(KisChartMin min) {
+        KisChartMin.CurrentStockInfo stockInfo = min.currentStockInfo();
+        return min.chartDataList()
+                .stream()
+                .map(data -> Chart.of(Long.parseLong(stockInfo.previousDayClosingPrice()), data))
+                .toList();
     }
 
     public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, List<KisChartMin> mins) {
