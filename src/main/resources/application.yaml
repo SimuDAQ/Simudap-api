@@ -28,7 +28,6 @@ kis:
     max-reconnect-attempts: 10  # 최대 재연결 시도 횟수
     reconnect-delay: 3000  # 재연결 대기 시간 (ms)
   path:
-    chart-min-today: /uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice
     chart-min-past: /uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice
     chart-period: /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
 

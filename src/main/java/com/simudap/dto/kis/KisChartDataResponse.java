@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
@@ -36,9 +33,10 @@ public class KisChartDataResponse {
                 .distinct()
                 .toList();
 
-        List<Chart> processedCharts = intervalValue > 1 ? mergeCandles(charts, intervalValue) : charts;
+        List<Chart> processedCharts = fillMissingAfternoonData(charts);
+        List<Chart> merged = intervalValue > 1 ? mergeCandles(processedCharts, intervalValue) : processedCharts;
 
-        List<Chart> sortedCharts = processedCharts.stream()
+        List<Chart> sortedCharts = merged.stream()
                 .sorted(Comparator.comparing(Chart::dateTime).reversed())
                 .limit(requestCount)
                 .toList();
@@ -48,6 +46,10 @@ public class KisChartDataResponse {
         this.stockCode = stockCode;
         this.nextDateTime = nextDateTime;
         this.candles = sortedCharts;
+    }
+
+    public static KisChartDataResponse of(KisChartDataRequest request, List<KisChartMin> mins) {
+        return new KisChartDataResponse(request, mins);
     }
 
     public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
@@ -69,10 +71,6 @@ public class KisChartDataResponse {
         this.candles = charts;
     }
 
-    public static KisChartDataResponse of(KisChartDataRequest request, List<KisChartMin> mins) {
-        return new KisChartDataResponse(request, mins);
-    }
-
     private List<Chart> convertToCharts(KisChartMin min) {
         KisChartMin.CurrentStockInfo stockInfo = min.currentStockInfo();
         return min.chartDataList()
@@ -92,7 +90,6 @@ public class KisChartDataResponse {
                 }));
 
         return groupedByTime.values().stream()
-//                .filter(chartList -> chartList.size() == intervalValue) // 완전한 봉만 생성
                 .map(group -> {
                     group.sort(Comparator.comparing(Chart::dateTime));
 
@@ -113,13 +110,51 @@ public class KisChartDataResponse {
                 .toList();
     }
 
+    private List<Chart> fillMissingAfternoonData(List<Chart> charts) {
+        // 3시 19분 ~ 29 분 동시 호가 데이터 생성
+        List<Chart> additionalData = charts.stream()
+                .filter(chart -> chart.dateTime().getHour() == 15 && chart.dateTime().getMinute() == 19)
+                .map(this::creatMissingData)
+                .flatMap(Collection::stream)
+                .toList();
+
+        List<Chart> result = new ArrayList<>(charts);
+        result.addAll(additionalData);
+        return result;
+    }
+
+    private List<Chart> creatMissingData(Chart chart319) {
+        // 3시 20 ~ 29 데이터는 19분 종가 데이터로 생성
+        List<Chart> additionalCharts = new ArrayList<>();
+        long closePrice = chart319.close();
+        long base = chart319.base();
+        LocalDateTime baseDateTime = chart319.dateTime();
+
+        for (int i = 1; i <= 10; i++) {
+            LocalDateTime newDateTime = baseDateTime.plusMinutes(i);
+            Chart newChart = new Chart(
+                    newDateTime,
+                    base,
+                    closePrice,
+                    closePrice,
+                    closePrice,
+                    closePrice,
+                    0L,
+                    chart319.accumulatedAmount()
+            );
+            additionalCharts.add(newChart);
+        }
+
+        return additionalCharts;
+    }
+
     private LocalDateTime getNextDateTime(ChartInterval interval, int intervalValue, LocalDateTime lastCandleTime) {
         return switch (interval) {
             case DAY -> lastCandleTime.minusDays(intervalValue);
             case WEEK -> lastCandleTime.minusWeeks(intervalValue);
             case MONTH -> lastCandleTime.minusMonths(intervalValue);
             case YEAR -> lastCandleTime.minusYears(intervalValue);
-            case MIN_TODAY, MIN_PAST -> lastCandleTime.minusMinutes(intervalValue);
+            case MIN -> lastCandleTime.minusMinutes(intervalValue);
         };
     }
 
