@@ -43,11 +43,17 @@ public class KisChartDataResponse {
                 .limit(requestCount)
                 .toList();
 
+        System.out.println(sortedCharts.size());
+
         LocalDateTime nextDateTime = getNextDateTime(interval, intervalValue, sortedCharts.getLast().dateTime());
 
         this.stockCode = stockCode;
         this.nextDateTime = nextDateTime;
         this.candles = sortedCharts;
+    }
+
+    public static KisChartDataResponse of(KisChartDataRequest request, List<KisChartMin> mins) {
+        return new KisChartDataResponse(request, mins);
     }
 
     public static KisChartDataResponse of(String stockCode, ChartInterval interval, int intervalValue, KisChartPeriod period) {
@@ -69,10 +75,6 @@ public class KisChartDataResponse {
         this.candles = charts;
     }
 
-    public static KisChartDataResponse of(KisChartDataRequest request, List<KisChartMin> mins) {
-        return new KisChartDataResponse(request, mins);
-    }
-
     private List<Chart> convertToCharts(KisChartMin min) {
         KisChartMin.CurrentStockInfo stockInfo = min.currentStockInfo();
         return min.chartDataList()
@@ -92,7 +94,6 @@ public class KisChartDataResponse {
                 }));
 
         return groupedByTime.values().stream()
-//                .filter(chartList -> chartList.size() == intervalValue) // 완전한 봉만 생성
                 .map(group -> {
                     group.sort(Comparator.comparing(Chart::dateTime));
 
@@ -119,7 +120,7 @@ public class KisChartDataResponse {
             case WEEK -> lastCandleTime.minusWeeks(intervalValue);
             case MONTH -> lastCandleTime.minusMonths(intervalValue);
             case YEAR -> lastCandleTime.minusYears(intervalValue);
-            case MIN_TODAY, MIN_PAST -> lastCandleTime.minusMinutes(intervalValue);
+            case MIN -> lastCandleTime.minusMinutes(intervalValue);
         };
     }
 

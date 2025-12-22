@@ -9,8 +9,7 @@ import java.util.Arrays;
 @Getter
 @RequiredArgsConstructor
 public enum ChartInterval {
-    MIN_TODAY(null),
-    MIN_PAST(null),
+    MIN(null),
     DAY("D"),
     WEEK("W"),
     MONTH("M"),
@@ -19,11 +18,7 @@ public enum ChartInterval {
 
     private final String value;
 
-    public static ChartInterval from(String interval, boolean isToday) {
-        if (interval.equalsIgnoreCase("min")) {
-            return isToday ? MIN_TODAY : MIN_PAST;
-        }
-
+    public static ChartInterval from(String interval) {
         return Arrays.stream(ChartInterval.values())
                 .filter(value -> value.name().equalsIgnoreCase(interval))
                 .findFirst()
