@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 @Tag(name = "Chart", description = "Chart API")
 @RestController
 @RequestMapping("/v1")
@@ -21,7 +23,7 @@ public class ChartController {
     @GetMapping("/chart/kr/{stockCode}/{interval}")
     public ResponseEntity<ApiResponse<KisChartDataResponse>> getChart(@PathVariable String stockCode,
                                                                       @PathVariable String interval,
-                                                                      @RequestParam(value = "from") String from,
+                                                                      @RequestParam(value = "from") LocalDateTime from,
                                                                       @RequestParam(value = "count") String count) {
         KisChartDataResponse response = chartFacade.getChart(stockCode, interval, from, count);
         return Responses.ok(response);
