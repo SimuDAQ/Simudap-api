@@ -33,13 +33,9 @@ public class KisChartDataRequest {
     private final String trId;
     private final MultiValueMap<String, String> params;
 
-    public static KisChartDataRequest parse(String stockCode, String interval, String from, String count) {
-        return new KisChartDataRequest(stockCode, interval, from, count);
-    }
-
-    private KisChartDataRequest(String stockCode, String intervalStr, String from, String count) {
+    private KisChartDataRequest(String stockCode, String intervalStr, LocalDateTime from, String count) {
         String[] interval = intervalStr.split(":");
-        LocalDateTime dateTime = TimeUtils.toLocalDateTime1(from);
+//        LocalDateTime dateTime = TimeUtils.toLocalDateTime1(from);
 
         if (interval.length < 2) {
             throw new BadRequestException("Invalid interval");
@@ -63,16 +59,20 @@ public class KisChartDataRequest {
         this.stockCode = stockCode;
         this.interval = chartInterval;
         this.intervalValue = intervalValue;
-        this.from = dateTime;
+        this.from = from;
         this.count = Integer.parseInt(count);
 
         if (chartInterval == ChartInterval.MIN) {
             this.trId = CHART_MIN_TR_ID;
-            this.params = buildMinParams(dateTime);
+            this.params = buildMinParams(from);
         } else {
             this.trId = CHART_PERIOD_TR_ID;
-            this.params = buildPeriodParams(dateTime);
+            this.params = buildPeriodParams(from);
         }
+    }
+
+    public static KisChartDataRequest parse(String stockCode, String interval, LocalDateTime from, String count) {
+        return new KisChartDataRequest(stockCode, interval, from, count);
     }
 
     public MultiValueMap<String, String> buildMinParams(LocalDateTime dateTime) {

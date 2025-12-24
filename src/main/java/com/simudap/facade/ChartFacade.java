@@ -11,6 +11,8 @@ import com.simudap.service.kospi.KospiMasterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 @RequiredArgsConstructor
 public class ChartFacade {
@@ -19,7 +21,7 @@ public class ChartFacade {
     private final KisApiService kisApiService;
     private final KospiMasterService kospiMasterService;
 
-    public KisChartDataResponse getChart(String stockCode, String interval, String from, String count) {
+    public KisChartDataResponse getChart(String stockCode, String interval, LocalDateTime from, String count) {
         String shortCode = kospiMasterService.findByShortCode(stockCode)
                 .map(KospiMaster::getShortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("There is no stock with code " + stockCode));
