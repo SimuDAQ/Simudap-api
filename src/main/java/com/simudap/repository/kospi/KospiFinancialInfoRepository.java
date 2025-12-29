@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface KospiFinancialInfoRepository extends JpaRepository<KospiFinancialInfo, Long> {
     List<KospiFinancialInfo> findAllByKospiMasterIdIn(Collection<Long> kospiMasterIds);
+
+    List<KospiFinancialInfo> findTop10ByOrderByPreviousDayMarketCapDesc();
 }
