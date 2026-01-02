@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface KospiMasterRepository extends JpaRepository<KospiMaster, Long> {
     Optional<KospiMaster> findByShortCode(String shortCode);
 
-    List<KospiMaster> findAllByNameKrContainingAndDeListed(String nameKr, boolean deListed);
+    List<KospiMaster> findAllByNameKrContainingAndIsDeListed(String nameKr, boolean isDeListed);
 
-    List<KospiMaster> findAllByIdAndDeListed(Collection<Long> ids, boolean deListed);
+    List<KospiMaster> findAllByIdInAndIsDeListed(Collection<Long> ids, boolean isDeListed);
 }
