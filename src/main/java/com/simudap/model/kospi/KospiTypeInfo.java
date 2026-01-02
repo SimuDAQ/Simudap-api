@@ -20,7 +20,7 @@ public class KospiTypeInfo {    // 이 종목이 어떤 종류/상품/규모인�
 
     // 증권그룹구분코드
     // ST:주권, MF:증권투자회사, RT:부동산투자회사, SC:선박투자회사
-    // IF:사회간접자본투융자회사, DR:주식예탁증서, EW:ELW, EF:ETF
+    // IF:사회간접자본투융자회사, DR:주식예탁증서, EW:ELW, EF:ETF, EN:ETN
     // SW:신주인수권증권, SR:신주인수권증서, BC:수익증권, FE:해외ETF, FS:외국주권
     @Column(name = "scrt_grp_cls_code", length = 2)
     private String securityGroupCode;
