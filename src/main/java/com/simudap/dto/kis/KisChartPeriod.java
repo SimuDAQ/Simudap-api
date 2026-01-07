@@ -1,157 +1,206 @@
 package com.simudap.dto.kis;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
 public record KisChartPeriod(
+        @Schema(title = "성공 실패 여부")
         @JsonProperty("rt_cd")
         String resultCode,
 
+        @Schema(title = "응답코드")
         @JsonProperty("msg_cd")
         String statusCode,
 
+        @Schema(title = "응답메세지")
         @JsonProperty("msg1")
         String message,
 
+        @Schema(title = "현재 주식 정보")
         @JsonProperty("output1")
         CurrentStockInfo currentStockInfo,
 
+        @Schema(title = "차트 데이터 리스트")
         @JsonProperty("output2")
         List<ChartData> chartDataList
 ) {
         public record CurrentStockInfo(
+                @Schema(title = "전일 대비")
                 @JsonProperty("prdy_vrss")
-                String previousDayChange,    // 전일 대비
+                String previousDayChange,
 
+                @Schema(title = "전일 대비 부호")
                 @JsonProperty("prdy_vrss_sign")
-                String previousDayChangeSign,    // 전일 대비 부호
+                String previousDayChangeSign,
 
+                @Schema(title = "전일 대비율")
                 @JsonProperty("prdy_ctrt")
-                String previousDayChangeRate,    // 전일 대비율
+                String previousDayChangeRate,
 
+                @Schema(title = "주식 전일 종가")
                 @JsonProperty("stck_prdy_clpr")
-                String previousDayClosingPrice,    // 주식 전일 종가
+                String previousDayClosingPrice,
 
+                @Schema(title = "누적 거래량")
                 @JsonProperty("acml_vol")
-                String accumulatedVolume,    // 누적 거래량
+                String accumulatedVolume,
 
+                @Schema(title = "누적 거래 대금")
                 @JsonProperty("acml_tr_pbmn")
-                String accumulatedTradingAmount,    // 누적 거래 대금
+                String accumulatedTradingAmount,
 
+                @Schema(title = "HTS 한글 종목명")
                 @JsonProperty("hts_kor_isnm")
-                String koreanStockName,    // HTS 한글 종목명
+                String koreanStockName,
 
+                @Schema(title = "주식 현재가")
                 @JsonProperty("stck_prpr")
-                String currentPrice,    // 주식 현재가
+                String currentPrice,
 
+                @Schema(title = "주식 단축 종목코드")
                 @JsonProperty("stck_shrn_iscd")
-                String stockCode,    // 주식 단축 종목코드
+                String stockCode,
 
+                @Schema(title = "전일 거래량")
                 @JsonProperty("prdy_vol")
-                String previousDayVolume,    // 전일 거래량
+                String previousDayVolume,
 
+                @Schema(title = "주식 상한가")
                 @JsonProperty("stck_mxpr")
-                String upperLimitPrice,    // 주식 상한가
+                String upperLimitPrice,
 
+                @Schema(title = "주식 하한가")
                 @JsonProperty("stck_llam")
-                String lowerLimitPrice,    // 주식 하한가
+                String lowerLimitPrice,
 
+                @Schema(title = "주식 시가")
                 @JsonProperty("stck_oprc")
-                String openingPrice,    // 주식 시가2
+                String openingPrice,
 
+                @Schema(title = "주식 최고가")
                 @JsonProperty("stck_hgpr")
-                String highPrice,    // 주식 최고가
+                String highPrice,
 
+                @Schema(title = "주식 최저가")
                 @JsonProperty("stck_lwpr")
-                String lowPrice,    // 주식 최저가
+                String lowPrice,
 
+                @Schema(title = "주식 전일 시가")
                 @JsonProperty("stck_prdy_oprc")
-                String previousDayOpeningPrice,    // 주식 전일 시가
+                String previousDayOpeningPrice,
 
+                @Schema(title = "주식 전일 최고가")
                 @JsonProperty("stck_prdy_hgpr")
-                String previousDayHighPrice,    // 주식 전일 최고가
+                String previousDayHighPrice,
 
+                @Schema(title = "주식 전일 최저가")
                 @JsonProperty("stck_prdy_lwpr")
-                String previousDayLowPrice,    // 주식 전일 최저가
+                String previousDayLowPrice,
 
+                @Schema(title = "매도호가")
                 @JsonProperty("askp")
-                String askPrice,    // 매도호가
+                String askPrice,
 
+                @Schema(title = "매수호가")
                 @JsonProperty("bidp")
-                String bidPrice,    // 매수호가
+                String bidPrice,
 
+                @Schema(title = "전일 대비 거래량")
                 @JsonProperty("prdy_vrss_vol")
-                String previousDayVolumeChange,    // 전일 대비 거래량
+                String previousDayVolumeChange,
 
+                @Schema(title = "거래량 회전율")
                 @JsonProperty("vol_tnrt")
-                String volumeTurnoverRate,    // 거래량 회전율
+                String volumeTurnoverRate,
 
+                @Schema(title = "주식 액면가")
                 @JsonProperty("stck_fcam")
-                String faceValue,    // 주식 액면가
+                String faceValue,
 
+                @Schema(title = "상장 주수")
                 @JsonProperty("lstn_stcn")
-                String listedShares,    // 상장 주수
+                String listedShares,
 
+                @Schema(title = "자본금")
                 @JsonProperty("cpfn")
-                String capital,    // 자본금
+                String capital,
 
+                @Schema(title = "HTS 시가총액")
                 @JsonProperty("hts_avls")
-                String marketCapitalization,    // HTS 시가총액
+                String marketCapitalization,
 
+                @Schema(title = "PER")
                 @JsonProperty("per")
-                String per,    // PER
+                String per,
 
+                @Schema(title = "EPS")
                 @JsonProperty("eps")
-                String eps,    // EPS
+                String eps,
 
+                @Schema(title = "PBR")
                 @JsonProperty("pbr")
-                String pbr,    // PBR
+                String pbr,
 
+                @Schema(title = "전체 융자 잔고 비율")
                 @JsonProperty("itewhol_loan_rmnd_ratem")
-                String marginLoanBalanceRate    // 전체 융자 잔고 비율
+                String marginLoanBalanceRate
         ) {
         }
 
         public record ChartData(
+                @Schema(title = "주식 영업 일자")
                 @JsonProperty("stck_bsop_date")
-                String businessDate,    // 주식 영업 일자
+                String businessDate,
 
+                @Schema(title = "주식 종가")
                 @JsonProperty("stck_clpr")
-                String closingPrice,    // 주식 종가
+                String closingPrice,
 
+                @Schema(title = "주식 시가")
                 @JsonProperty("stck_oprc")
-                String openingPrice,    // 주식 시가2
+                String openingPrice,
 
+                @Schema(title = "주식 최고가")
                 @JsonProperty("stck_hgpr")
-                String highPrice,    // 주식 최고가
+                String highPrice,
 
+                @Schema(title = "주식 최저가")
                 @JsonProperty("stck_lwpr")
-                String lowPrice,    // 주식 최저가
+                String lowPrice,
 
+                @Schema(title = "누적 거래량")
                 @JsonProperty("acml_vol")
-                String accumulatedVolume,    // 누적 거래량
+                String accumulatedVolume,
 
+                @Schema(title = "누적 거래 대금")
                 @JsonProperty("acml_tr_pbmn")
-                String accumulatedTradingAmount,    // 누적 거래 대금
+                String accumulatedTradingAmount,
 
+                @Schema(title = "락 구분 코드")
                 @JsonProperty("flng_cls_code")
-                String lockTypeCode,    // 락 구분 코드
+                String lockTypeCode,
 
+                @Schema(title = "분할 비율")
                 @JsonProperty("prtt_rate")
-                String splitRatio,    // 분할 비율
+                String splitRatio,
 
+                @Schema(title = "변경 여부")
                 @JsonProperty("mod_yn")
-                String isModified,    // 변경 여부
+                String isModified,
 
+                @Schema(title = "전일 대비 부호")
                 @JsonProperty("prdy_vrss_sign")
-                String previousDayChangeSign,    // 전일 대비 부호
+                String previousDayChangeSign,
 
+                @Schema(title = "전일 대비")
                 @JsonProperty("prdy_vrss")
-                String previousDayChange,    // 전일 대비
+                String previousDayChange,
 
+                @Schema(title = "재평가사유코드")
                 @JsonProperty("revl_issu_reas")
-                String revaluationReasonCode    // 재평가사유코드
+                String revaluationReasonCode
         ) {
         }
 }
