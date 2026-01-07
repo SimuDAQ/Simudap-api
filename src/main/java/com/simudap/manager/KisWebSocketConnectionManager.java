@@ -1,10 +1,14 @@
 package com.simudap.manager;
 
+import com.simudap.dto.websocket.StockExecutionData;
 import com.simudap.dto.websocket.StockRealtimeData;
+import com.simudap.enums.kis.KisTradeType;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -21,10 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * KIS WebSocket 연결 관리 서비스
- * 연결, 재연결, 연결 상태 확인 책임을 담당
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -59,8 +59,11 @@ public class KisWebSocketConnectionManager {
     @Value("${kis.websocket.reconnect-delay}")
     private long reconnectDelay;
 
-    @Value("${websocket.endpoints.stock-data-topic}")
-    private String stockDataTopicPrefix;
+    @Value("${websocket.endpoints.stock-askbid-topic}")
+    private String stockAskBidTopicPrefix;
+
+    @Value("${websocket.endpoints.stock-execution-topic}")
+    private String stockExecutionTopicPrefix;
 
     @PostConstruct
     public void init() {
@@ -71,7 +74,6 @@ public class KisWebSocketConnectionManager {
         BinaryWebSocketHandler handler = new BinaryWebSocketHandler() {
             @Override
             public void afterConnectionEstablished(WebSocketSession session) {
-                log.info("KIS WebSocket connected: {}", session.getId());
 
                 // 세션 설정 콜백 실행
                 if (sessionSetterCallback != null) {
@@ -108,7 +110,6 @@ public class KisWebSocketConnectionManager {
                 kisWebSocketUrl
         );
         connectionManager.setAutoStartup(false);
-        log.info("KIS WebSocket ConnectionManager initialization completed");
     }
 
     private boolean isConnected() {
@@ -122,18 +123,11 @@ public class KisWebSocketConnectionManager {
         }
 
         if (!connectionManager.isRunning()) {
-            log.info("KIS WebSocket connection start...");
             connectionManager.start();
-        } else {
-            log.info("KIS WebSocket is already connected.");
         }
     }
 
-    /**
-     * 연결 성공 시 호출 (내부 Handler에서 호출)
-     */
     private void onConnectionEstablished() {
-        log.info("KIS WebSocket connection successful");
         // 재연결 시도 횟수 초기화
         reconnectAttempts.set(0);
 
@@ -151,16 +145,11 @@ public class KisWebSocketConnectionManager {
             return;
         }
 
-        log.info("KIS WebSocket reconnect attempt {}/{} - Retrying after {}ms",
-                currentAttempt, maxReconnectAttempts, reconnectDelay);
-
         scheduler.schedule(this::reconnect, reconnectDelay, TimeUnit.MILLISECONDS);
     }
 
     private void reconnect() {
         try {
-            log.info("KIS WebSocket reconnecting...");
-
             // 기존 연결 종료
             if (connectionManager.isRunning()) {
                 connectionManager.stop();
@@ -168,8 +157,6 @@ public class KisWebSocketConnectionManager {
 
             // 새로운 연결 시작
             connectionManager.start();
-
-            log.info("KIS WebSocket reconnection request completed");
         } catch (Exception e) {
             log.error("Error occurred during KIS WebSocket reconnection", e);
             // 재연결 실패 시 다시 스케줄링
@@ -177,19 +164,14 @@ public class KisWebSocketConnectionManager {
         }
     }
 
-    /**
-     * 연결이 안 되어 있으면 연결하고 대기
-     */
+
     public void ensureConnected(Supplier<WebSocketSession> sessionSupplier) {
         WebSocketSession session = sessionSupplier.get();
 
         if (session == null || !session.isOpen()) {
-            log.info("KIS WebSocket is not connected. Connecting start...");
-
             if (!isConnected()) {
                 connect();
 
-                // 연결이 완료될 때까지 대기 (최대 5초)
                 int maxWaitTime = 5000;
                 int waitedTime = 0;
                 int checkInterval = 100;
@@ -221,10 +203,9 @@ public class KisWebSocketConnectionManager {
         if (stockInfos.length > 1) {
             String stockShortCode = stockInfos[0];
             String[] split = stockShortCode.split("\\|");
-            String stockCode = split[split.length - 1];
 
-            log.info("Stock short code: {}", stockShortCode);
-            log.info("Business time: {}, Time code: {}", stockInfos[1], stockInfos[2]);
+            String trId = split.length > 1 ? split[1] : "";
+            String stockCode = split[split.length - 1];
 
             if (!subscriptionManager.hasSubscribers(stockCode)) {
                 log.warn("No subscribers for stock code {}. Requesting KIS unsubscribe...", stockCode);
@@ -235,15 +216,36 @@ public class KisWebSocketConnectionManager {
                 return;
             }
 
-            StockRealtimeData data = StockRealtimeData.of(stockInfos);
 
-            try {
-                String destination = stockDataTopicPrefix + stockCode;
-                messagingTemplate.convertAndSend(destination, data);
-                log.debug("Stock data transmission completed: {} -> {}", stockShortCode, destination);
-            } catch (Exception e) {
-                log.error("Error occurred during data transmission - Stock code: {}", stockShortCode, e);
+            if (Strings.CI.equals(KisTradeType.ASK_BID.getValue(), trId)) {
+                handleAskBidData(stockCode, stockShortCode, stockInfos);
+            } else if (Strings.CI.equals(KisTradeType.EXECUTION.getValue(), trId)) {
+                handleExecutionData(stockCode, stockShortCode, stockInfos);
+            } else {
+                log.warn("Unknown TR_ID: {}, Stock code: {}", trId, stockCode);
             }
+        }
+    }
+
+    private void handleAskBidData(String stockCode, String stockShortCode, String[] stockInfos) {
+        try {
+            StockRealtimeData data = StockRealtimeData.of(stockInfos);
+            String destination = stockAskBidTopicPrefix + stockCode;
+            messagingTemplate.convertAndSend(destination, data);
+            log.debug("Stock askbid data transmission completed: {} -> {}", stockShortCode, destination);
+        } catch (Exception e) {
+            log.error("Error occurred during askbid data transmission - Stock code: {}", stockCode, e);
+        }
+    }
+
+    private void handleExecutionData(String stockCode, String stockShortCode, String[] stockInfos) {
+        try {
+            StockExecutionData data = StockExecutionData.of(stockInfos);
+            String destination = stockExecutionTopicPrefix + stockCode;
+            messagingTemplate.convertAndSend(destination, data);
+            log.debug("Stock execution data transmission completed: {} -> {}", stockShortCode, destination);
+        } catch (Exception e) {
+            log.error("Error occurred during execution data transmission - Stock code: {}", stockCode, e);
         }
     }
 }
