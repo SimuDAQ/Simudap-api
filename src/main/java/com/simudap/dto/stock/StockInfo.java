@@ -1,6 +1,6 @@
 package com.simudap.dto.stock;
 
-import com.simudap.model.kospi.KospiIndexInfo;
+import com.simudap.model.kospi.KospiFinancialInfo;
 import com.simudap.model.kospi.KospiMaster;
 import com.simudap.model.kospi.KospiTradingInfo;
 import com.simudap.model.kospi.KospiTypeInfo;
@@ -14,8 +14,8 @@ public record StockInfo(
         int previousDayVolume,
         MetaData meta
 ) {
-    public static StockInfo of(KospiMaster kospiMaster, KospiTradingInfo tradingInfo, KospiTypeInfo kospiTypeInfo) {
-        MetaData metaData = MetaData.of(kospiTypeInfo);
+    public static StockInfo of(KospiMaster kospiMaster, KospiTradingInfo tradingInfo, KospiTypeInfo kospiTypeInfo, KospiFinancialInfo kospiFinancialInfo) {
+        MetaData metaData = MetaData.of(kospiTypeInfo, kospiFinancialInfo);
         return new StockInfo(
                 kospiMaster.getId(),
                 kospiMaster.getShortCode(),
@@ -28,11 +28,13 @@ public record StockInfo(
     }
 
     public record MetaData(
-            String groupCode
+            String groupCode,
+            Integer previousDayMarketCap
     ) {
-        public static MetaData of(KospiTypeInfo kospiTypeInfo) {
+        public static MetaData of(KospiTypeInfo kospiTypeInfo, KospiFinancialInfo kospiFinancialInfo) {
             return new MetaData(
-                    kospiTypeInfo.getSecurityGroupCode()
+                    kospiTypeInfo.getSecurityGroupCode(),
+                    kospiFinancialInfo.getPreviousDayMarketCap()
             );
         }
     }
