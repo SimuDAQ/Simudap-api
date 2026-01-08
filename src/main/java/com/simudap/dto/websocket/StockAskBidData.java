@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.List;
 
-public record StockRealtimeData(
+public record StockAskBidData(
         @Schema(title = "종목코드") String stockCode,
         @Schema(title = "영업시간") String businessTime,
         @Schema(title = "사간 구분 코드") String timeCode,
@@ -24,7 +24,7 @@ public record StockRealtimeData(
         @Schema(title = "주식매매 구분코드") String tradeTypeCode
 ) {
 
-    public static StockRealtimeData of(String[] recvvalue) {
+    public static StockAskBidData of(String stockCode, String[] recvvalue) {
         List<PriceLevel> askPrices = new ArrayList<>();
         for (int i = 1; i <= 10; i++) {
             askPrices.add(new PriceLevel(
@@ -50,8 +50,8 @@ public record StockRealtimeData(
                 recvvalue[52]
         );
 
-        return new StockRealtimeData(
-                recvvalue[0],
+        return new StockAskBidData(
+                stockCode,
                 recvvalue[1],
                 recvvalue[2],
                 askPrices,
