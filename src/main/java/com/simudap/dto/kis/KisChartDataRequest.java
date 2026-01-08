@@ -77,7 +77,7 @@ public class KisChartDataRequest {
 
     public MultiValueMap<String, String> buildMinParams(LocalDateTime dateTime) {
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add(KisRequestParam.FID_COND_MRKT_DIV_CODE.name(), "J");
+        map.add(KisRequestParam.FID_COND_MRKT_DIV_CODE.name(), "UN");
         map.add(KisRequestParam.FID_INPUT_ISCD.name(), this.stockCode);
         map.add(KisRequestParam.FID_INPUT_HOUR_1.name(), TimeUtils.toTimeString(dateTime));
         map.add(KisRequestParam.FID_INPUT_DATE_1.name(), TimeUtils.toDateString(dateTime));
@@ -90,7 +90,7 @@ public class KisChartDataRequest {
         LocalDateTime pastDateTime = getPastDateTime(dateTime);
 
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add(KisRequestParam.FID_COND_MRKT_DIV_CODE.name(), "J");
+        map.add(KisRequestParam.FID_COND_MRKT_DIV_CODE.name(), "UN");
         map.add(KisRequestParam.FID_INPUT_ISCD.name(), this.stockCode);
         map.add(KisRequestParam.FID_INPUT_DATE_1.name(), TimeUtils.toDateString(pastDateTime));
         map.add(KisRequestParam.FID_INPUT_DATE_2.name(), TimeUtils.toDateString(dateTime));

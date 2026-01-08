@@ -19,9 +19,6 @@ public class StockWebSocketController {
 
     private final WebSocketFacade webSocketFacade;
 
-    @Value("${websocket.endpoints.stock-data-topic}")
-    private String stockDataTopicPrefix;
-
     @MessageMapping("/stock/subscribe")
     @SendToUser("/queue/reply")
     public WebSocketResponse subscribe(@Payload ClientMessage message, SimpMessageHeaderAccessor headerAccessor) {
@@ -30,12 +27,9 @@ public class StockWebSocketController {
 
         webSocketFacade.subscribe(sessionId, stockCode);
 
-        String dataEndpoint = stockDataTopicPrefix + stockCode;
+        log.info("Stock subscription completed - Session: {}, Stock: {}", sessionId, stockCode);
 
-        log.info("Stock subscription completed - Session: {}, Stock: {}, DataEndpoint: {}",
-                sessionId, stockCode, dataEndpoint);
-
-        return WebSocketResponse.success("subscribed", stockCode, dataEndpoint);
+        return WebSocketResponse.success("subscribed", stockCode);
     }
 
     @MessageMapping("/stock/unsubscribe")

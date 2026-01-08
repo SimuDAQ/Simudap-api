@@ -5,10 +5,11 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum KisRequestBody {
-    TRADE_ID_KRX("H0STASP0", "KRX"),
-    TRADE_ID_NXT("H0NXASP0", "NXT"),
-    TRADE_ID_UN("H0UNASP0", "통합"),
+public enum KisTradeType {
+    KRX("H0STASP0", "KRX"),
+    NXT("H0NXASP0", "NXT"),
+    ASK_BID("H0UNASP0", "실시간 호가 통합"),
+    EXECUTION("H0UNCNT0", "실시간 체결 통합"),
     ;
 
     private final String value;

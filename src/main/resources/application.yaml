@@ -35,7 +35,8 @@ kis:
 # WebSocket STOMP 엔드포인트 설정
 websocket:
   endpoints:
-    stock-data-topic: /topic/stock/  # 실시간 주식 시세 데이터 브로드캐스트 토픽
+    stock-askbid-topic: /topic/stock/askbid/  # 실시간 호가 데이터 브로드캐스트 토픽
+    stock-execution-topic: /topic/stock/execution/  # 실시간 체결 데이터 브로드캐스트 토픽
 
 springdoc:
   packages-to-scan: com.simudap.controller

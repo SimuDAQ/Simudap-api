@@ -9,10 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
-/**
- * STOMP 기반 종목 구독 관리 서비스
- * 종목별 구독자 세션 ID를 추적하여 KIS 구독 관리에 활용
- */
 @Slf4j
 @Service
 public class ClientStockSubscriptionManager {
@@ -26,7 +22,6 @@ public class ClientStockSubscriptionManager {
     public void addSubscriber(String stockCode, String sessionId) {
         stockSubscriptions.computeIfAbsent(stockCode, k -> new CopyOnWriteArraySet<>()).add(sessionId);
         sessionSubscriptions.computeIfAbsent(sessionId, k -> new CopyOnWriteArraySet<>()).add(stockCode);
-        log.info("Subscriber added - Stock: {}, Session: {}", stockCode, sessionId);
     }
 
     public void removeSubscriber(String stockCode, String sessionId) {
@@ -45,8 +40,6 @@ public class ClientStockSubscriptionManager {
                 sessionSubscriptions.remove(sessionId);
             }
         }
-
-        log.info("Subscriber removed - Stock: {}, Session: {}", stockCode, sessionId);
     }
 
     public void removeAllSubscriptions(String sessionId) {
@@ -61,7 +54,6 @@ public class ClientStockSubscriptionManager {
                     }
                 }
             });
-            log.info("All subscriptions removed for session: {}", sessionId);
         }
     }
 

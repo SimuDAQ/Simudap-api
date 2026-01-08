@@ -14,10 +14,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-/**
- * STOMP 구독 인터셉터
- * 세션별 구독 정보를 추적하여 중복 구독을 차단
- */
 @Slf4j
 @Component
 public class StompPreHandler implements ChannelInterceptor {
@@ -41,9 +37,6 @@ public class StompPreHandler implements ChannelInterceptor {
                 String destination = accessor.getDestination();
                 String subscriptionId = accessor.getSubscriptionId();
 
-                log.debug("SUBSCRIBE command - Session: {}, Destination: {}, SubId: {}",
-                         sessionId, destination, subscriptionId);
-
                 if (isAlreadySubscribed(sessionId, destination)) {
                     log.warn("Duplicate subscription blocked - Session: {}, Destination: {}",
                             sessionId, destination);
@@ -51,15 +44,11 @@ public class StompPreHandler implements ChannelInterceptor {
                 }
 
                 addSubscription(sessionId, destination, subscriptionId);
-                log.info("✅ New subscription allowed - Session: {}, Destination: {}",
-                        sessionId, destination);
             } else if (StompCommand.UNSUBSCRIBE.equals(command)) {
                 String subscriptionId = accessor.getSubscriptionId();
                 removeSubscription(sessionId, subscriptionId);
-                log.debug("UNSUBSCRIBE - Session: {}, SubId: {}", sessionId, subscriptionId);
             } else if (StompCommand.DISCONNECT.equals(command)) {
                 removeAllSubscriptions(sessionId);
-                log.info("DISCONNECT - Removed all subscriptions for session: {}", sessionId);
             }
         }
 
