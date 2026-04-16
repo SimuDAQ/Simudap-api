@@ -32,14 +32,14 @@ class ChartControllerTest {
     private KisChartDataResponse mockChartDataResponse;
     private String stockCode;
     private String interval;
-    private String from;
+    private LocalDateTime from;
     private String count;
 
     @BeforeEach
     void setUp() {
         stockCode = "005930";
         interval = "min:1";
-        from = "2025-12-10 17:21:45.123";
+        from = LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000);
         count = "100";
 
         mockChartDataResponse = new KisChartDataResponse(
