@@ -62,7 +62,7 @@ class KisApiServiceTest {
         minIntervalRequest = KisChartDataRequest.parse(
                 "005930",
                 "min:1",
-                "2025-12-10 17:21:45.123",
+                LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000),
                 "100"
         );
 
@@ -70,7 +70,7 @@ class KisApiServiceTest {
         dayIntervalRequest = KisChartDataRequest.parse(
                 "005930",
                 "day:1",
-                "2025-12-10 17:21:45.123",
+                LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000),
                 "100"
         );
 
@@ -263,7 +263,7 @@ class KisApiServiceTest {
         KisChartDataRequest min3Request = KisChartDataRequest.parse(
                 "005930",
                 "min:3",
-                "2025-12-10 17:21:45.123",
+                LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000),
                 "100"
         );
 
@@ -289,7 +289,7 @@ class KisApiServiceTest {
         KisChartDataRequest weekRequest = KisChartDataRequest.parse(
                 "005930",
                 "week:1",
-                "2025-12-10 17:21:45.123",
+                LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000),
                 "50"
         );
 

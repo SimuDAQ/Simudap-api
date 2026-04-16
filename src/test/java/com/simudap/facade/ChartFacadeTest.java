@@ -43,7 +43,7 @@ class ChartFacadeTest {
 
     private String stockCode;
     private String interval;
-    private String from;
+    private LocalDateTime from;
     private String count;
     private KospiMaster mockKospiMaster;
     private KisToken mockKisToken;
@@ -53,7 +53,7 @@ class ChartFacadeTest {
     void setUp() {
         stockCode = "005930";
         interval = "min:1";
-        from = "2025-12-10 17:21:45.123";
+        from = LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000);
         count = "100";
 
         mockKospiMaster = new KospiMaster(
@@ -160,7 +160,7 @@ class ChartFacadeTest {
     void testGetChart_WithDayInterval() {
         // given
         String dayInterval = "day:1";
-        String dayFrom = "2025-12-10 17:21:45.123";
+        LocalDateTime dayFrom = LocalDateTime.of(2025, 12, 10, 17, 21, 45, 123_000_000);
 
         when(kospiMasterService.findByShortCode(eq(stockCode)))
                 .thenReturn(Optional.of(mockKospiMaster));
